@@ -1,0 +1,131 @@
+# 评估权重配置
+
+# 总体权重分配
+weights:
+  structure: 0.25      # 结构验证
+  boundary: 0.25       # 场景边界
+  character: 0.25      # 角色提取
+  semantic: 0.25       # 语义准确
+
+# 场景1（标准剧本）特定配置
+scene1:
+  # 场景边界评估
+  boundary_tolerance: 2          # off-by-n容差（行数）
+  min_characters: 1              # 最少角色数
+  require_setting_format: true   # 要求严格的场景设置格式
+
+  # 场景ID验证
+  scene_id_pattern: "^(E\\d{2})?S\\d{2}$"
+
+  # 必需字段
+  required_fields:
+    - scene_id
+    - setting
+    - characters
+    - scene_mission
+    - key_events
+
+  # 关键事件数量范围
+  key_events_range:
+    min: 1
+    max: 3
+
+  # 字段权重（用于完整性评分）
+  field_weights:
+    scene_id: 0.10
+    setting: 0.15
+    characters: 0.20
+    scene_mission: 0.20
+    key_events: 0.20
+    info_change: 0.05
+    relation_change: 0.05
+    key_object: 0.03
+    setup_payoff: 0.02
+
+# 场景2（故事大纲）特定配置
+scene2:
+  # 场景边界评估
+  boundary_tolerance: 3          # 更宽松的容差
+  min_characters: 0              # 可以无角色（仅推断）
+  require_setting_format: false  # 不要求严格格式
+  allow_inference: true          # 允许推断信息
+
+  # 场景ID验证
+  scene_id_pattern: "^S\\d+$"   # 更简单的格式
+
+  # 必需字段（更宽松）
+  required_fields:
+    - scene_id
+    - scene_mission
+    - key_events
+
+  # 关键事件数量范围
+  key_events_range:
+    min: 1
+    max: 5                       # 大纲可以有更多事件
+
+  # 字段权重
+  field_weights:
+    scene_id: 0.10
+    setting: 0.10              # 降低setting权重
+    characters: 0.15           # 降低角色权重
+    scene_mission: 0.25        # 提高任务权重
+    key_events: 0.25           # 提高事件权重
+    info_change: 0.05
+    relation_change: 0.05
+    key_object: 0.03
+    setup_payoff: 0.02
+
+# 角色提取评估配置
+character_evaluation:
+  # 角色一致性阈值
+  consistency_threshold: 0.80
+
+  # 角色重要性评估
+  importance_evaluation:
+    entropy_range:
+      min: 0.3               # 最小熵（主角突出）
+      max: 0.7               # 最大熵（分布合理）
+
+  # 主要角色判断（出现次数占比）
+  main_character_threshold: 0.3
+
+# 场景边界评估配置
+boundary_evaluation:
+  # 结构评分权重
+  id_continuity_weight: 0.3
+  setting_validity_weight: 0.3
+  field_completeness_weight: 0.4
+
+  # 语义评分权重（如果启用LLM）
+  structural_weight: 0.4
+  semantic_weight: 0.6
+
+# 语义评估配置
+semantic_evaluation:
+  # 各维度权重
+  mission_accuracy_weight: 0.25
+  events_coverage_weight: 0.25
+  info_accuracy_weight: 0.25
+  relation_accuracy_weight: 0.25
+
+  # 评分校准
+  calibration:
+    enabled: false           # 是否启用评分校准
+    method: "linear"         # linear, isotonic, beta
+
+# 自一致性评估配置
+consistency_evaluation:
+  # 字段权重
+  field_weights:
+    scene_id: 0.15
+    setting: 0.15
+    characters: 0.25
+    key_events: 0.25
+    scene_mission: 0.20
+
+  # 一致性阈值
+  threshold: 0.70
+
+  # 运行次数
+  num_runs: 5
