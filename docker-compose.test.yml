@@ -1,0 +1,119 @@
+# 测试环境配置
+# 使用方式: docker-compose -f docker-compose.yml -f docker-compose.test.yml up
+
+version: '3.8'
+
+services:
+  app:
+    build:
+      target: test
+
+    container_name: script-eval-test
+
+    # 测试命令
+    command: pytest tests/ -v --cov=src --cov-report=html --cov-report=term
+
+    environment:
+      - ENVIRONMENT=test
+      - USE_DEEPSEEK_JUDGE=false  # 测试时不调用API
+      - RUN_CONSISTENCY_CHECK=false
+
+    # 测试时只挂载必要的目录
+    volumes:
+      - ./src:/app/src:ro
+      - ./tests:/app/tests:ro
+      - ./configs:/app/configs:ro
+      - ./outputs:/app/outputs
+      - ./htmlcov:/app/htmlcov
+
+    # 资源限制
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 1G
+
+    # 健康检查
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys; sys.exit(0)"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+  # 单元测试服务
+  unit-test:
+    build:
+      target: test
+
+    container_name: script-eval-unit-test
+
+    command: pytest tests/unit/ -v --cov=src --cov-report=term
+
+    environment:
+      - ENVIRONMENT=test
+      - TEST_TYPE=unit
+
+    volumes:
+      - ./src:/app/src:ro
+      - ./tests:/app/tests:ro
+      - ./configs:/app/configs:ro
+
+    networks:
+      - script-eval-network
+
+    profiles:
+      - test
+
+  # 集成测试服务
+  integration-test:
+    build:
+      target: test
+
+    container_name: script-eval-integration-test
+
+    command: pytest tests/integration/ -v --cov=src --cov-report=term
+
+    environment:
+      - ENVIRONMENT=test
+      - TEST_TYPE=integration
+
+    volumes:
+      - ./src:/app/src:ro
+      - ./tests:/app/tests:ro
+      - ./configs:/app/configs:ro
+      - ./outputs:/app/outputs
+
+    networks:
+      - script-eval-network
+
+    profiles:
+      - test
+
+  # 系统测试服务
+  system-test:
+    build:
+      target: test
+
+    container_name: script-eval-system-test
+
+    command: python scripts/test_system.py
+
+    environment:
+      - ENVIRONMENT=test
+      - TEST_TYPE=system
+
+    volumes:
+      - ./src:/app/src:ro
+      - ./scripts:/app/scripts:ro
+      - ./configs:/app/configs:ro
+      - ./outputs:/app/outputs
+
+    networks:
+      - script-eval-network
+
+    profiles:
+      - test

@@ -1,0 +1,86 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+
+# 虚拟环境
+venv/
+env/
+ENV/
+.venv
+
+# 环境变量（但保留.env.example）
+.env
+.env.local
+!.env.example
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# 测试和覆盖率
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.hypothesis/
+
+# 输出文件（运行时生成）
+outputs/
+evaluation_results/
+*.log
+
+# 缓存
+.cache/
+*.cache
+
+# Jupyter
+.ipynb_checkpoints
+
+# 临时文件
+*.tmp
+*.bak
+tmp/
+temp/
+
+# Docker
+.dockerignore
+Dockerfile*
+docker-compose*.yml
+
+# 文档构建
+docs/_build/
+site/
+
+# 大文件和数据
+*.model
+*.pkl
+*.pickle
+data/
+*.tar.gz
+*.zip
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+
+# 其他
+LICENSE
+README.md
+*.md
+Makefile

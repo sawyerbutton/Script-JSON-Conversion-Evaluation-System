@@ -1,0 +1,123 @@
+# 生产环境配置
+# 使用方式: docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+version: '3.8'
+
+services:
+  app:
+    build:
+      target: production
+      args:
+        - BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+        - VCS_REF=$(git rev-parse --short HEAD)
+
+    image: script-eval:${VERSION:-latest}
+    container_name: script-eval-prod
+
+    restart: always
+
+    # 生产环境命令
+    command: python scripts/test_system.py
+
+    environment:
+      - ENVIRONMENT=production
+      - DEBUG=false
+      - LOG_LEVEL=INFO
+      - PYTHONOPTIMIZE=2
+
+    # 生产环境只读挂载代码，输出写入卷
+    volumes:
+      - ./configs:/app/configs:ro
+      - ./prompts:/app/prompts:ro
+      - outputs-prod:/app/outputs
+      - logs-prod:/app/logs
+      - cache-prod:/app/.cache
+
+    # 生产环境不暴露端口（除非需要Web服务）
+    # ports:
+    #   - "8000:8000"
+
+    # 严格的资源限制
+    deploy:
+      mode: replicated
+      replicas: 1
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+        reservations:
+          cpus: '1'
+          memory: 2G
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+
+    # 健康检查
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys; sys.exit(0)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+    # 日志配置
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+        compress: "true"
+
+    # 安全选项
+    security_opt:
+      - no-new-privileges:true
+
+    # 只读根文件系统（除了必要的写入目录）
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /app/.cache
+
+  # Nginx反向代理（如果需要Web访问）
+  nginx:
+    image: nginx:alpine
+    container_name: script-eval-nginx
+    restart: always
+
+    ports:
+      - "80:80"
+      - "443:443"
+
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - nginx-cache:/var/cache/nginx
+      - nginx-logs:/var/log/nginx
+
+    networks:
+      - script-eval-network
+
+    depends_on:
+      - app
+
+    profiles:
+      - web
+
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+volumes:
+  outputs-prod:
+    driver: local
+  logs-prod:
+    driver: local
+  cache-prod:
+    driver: local
+  nginx-cache:
+    driver: local
+  nginx-logs:
+    driver: local
