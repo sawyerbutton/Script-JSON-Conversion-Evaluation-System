@@ -1,0 +1,100 @@
+# 剧本JSON转换评估系统 - Docker Compose主配置
+# 基础配置，通过docker-compose.{dev,test,prod}.yml扩展
+
+version: '3.8'
+
+services:
+  # 主应用服务
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    image: script-eval:latest
+    container_name: script-eval-app
+    restart: unless-stopped
+
+    # 环境变量
+    environment:
+      - PYTHONUNBUFFERED=1
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+
+    # 环境变量文件
+    env_file:
+      - .env
+
+    # 卷挂载
+    volumes:
+      - ./src:/app/src
+      - ./tests:/app/tests
+      - ./configs:/app/configs
+      - ./prompts:/app/prompts
+      - ./scripts:/app/scripts
+      - ./outputs:/app/outputs
+      - ./data:/app/data
+
+    # 工作目录
+    working_dir: /app
+
+    # 网络
+    networks:
+      - script-eval-network
+
+    # 日志配置
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Jupyter Notebook服务（开发用）
+  jupyter:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    image: script-eval:latest
+    container_name: script-eval-jupyter
+    restart: unless-stopped
+
+    command: >
+      jupyter notebook
+      --ip=0.0.0.0
+      --port=8888
+      --no-browser
+      --allow-root
+      --NotebookApp.token=''
+      --NotebookApp.password=''
+
+    environment:
+      - PYTHONUNBUFFERED=1
+      - JUPYTER_ENABLE_LAB=yes
+
+    env_file:
+      - .env
+
+    volumes:
+      - ./:/app
+      - jupyter-data:/root/.jupyter
+
+    ports:
+      - "8888:8888"
+
+    networks:
+      - script-eval-network
+
+    profiles:
+      - dev
+      - jupyter
+
+# 网络配置
+networks:
+  script-eval-network:
+    driver: bridge
+
+# 卷配置
+volumes:
+  jupyter-data:
+    driver: local
+  outputs-data:
+    driver: local
