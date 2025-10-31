@@ -1,0 +1,105 @@
+# DeepSeek API配置
+
+api:
+  # API基本配置
+  base_url: "https://api.deepseek.com/v1"
+  # API Key通过环境变量设置: DEEPSEEK_API_KEY
+
+  # 模型选择
+  default_model: "deepseek-chat"     # 默认模型
+
+  # 备选模型配置
+  models:
+    chat: "deepseek-chat"            # 用于语义评估
+    coder: "deepseek-coder"          # 用于JSON结构分析（如需要）
+
+  # 请求参数
+  temperature: 0.1                   # 评估用低温度
+  max_tokens: 4096                   # 最大生成token数
+  top_p: 0.95
+  frequency_penalty: 0.0
+  presence_penalty: 0.0
+
+  # 重试配置
+  max_retries: 3                     # 最大重试次数
+  retry_delay: 2                     # 初始重试延迟（秒）
+  retry_backoff: 2.0                 # 退避倍数
+
+  # 超时配置
+  timeout: 60                        # 请求超时（秒）
+
+  # 限流配置
+  rate_limit:
+    requests_per_minute: 60          # 每分钟请求数
+    tokens_per_minute: 100000        # 每分钟token数
+    concurrent_requests: 5           # 并发请求数
+
+# 成本追踪配置
+cost_tracking:
+  enabled: true
+
+  # DeepSeek定价（人民币/百万tokens）
+  # 注意：请根据最新价格更新
+  pricing:
+    input_price: 1.0                 # 输入token价格（¥/M tokens）
+    output_price: 2.0                # 输出token价格（¥/M tokens）
+    cache_hit_discount: 0.1          # 缓存命中折扣
+
+  # 预算限制
+  budget:
+    daily_limit: 100.0               # 每日预算限制（人民币）
+    warning_threshold: 0.8           # 警告阈值（80%）
+    alert_threshold: 0.95            # 告警阈值（95%）
+
+# LLM-as-Judge特定配置
+judge:
+  # 评估模型配置
+  model: "deepseek-chat"
+  temperature: 0.0                   # 判断时使用0温度确保一致性
+
+  # 偏见缓解策略
+  bias_mitigation:
+    position_randomization: true     # 位置随机化
+    multiple_runs: false             # 多次运行取中位数（慎用，增加成本）
+    num_runs: 3                      # 如果启用多次运行
+
+  # 评估提示配置
+  prompts:
+    system_prompt: |
+      你是一个专业的剧本分析评估专家。
+      请客观、严格地评估提取结果的质量。
+
+      评估原则：
+      1. 基于提供的评估标准进行评分
+      2. 提供具体的推理过程
+      3. 指出具体的问题和改进建议
+      4. 使用0-1的评分范围
+
+      评分标准：
+      - 0.0-0.4: 不合格，存在严重问题
+      - 0.4-0.6: 勉强合格，有明显不足
+      - 0.6-0.8: 合格，质量良好
+      - 0.8-0.9: 优秀，少量小问题
+      - 0.9-1.0: 完美，几乎无可挑剔
+
+    use_cot: true                    # 使用思维链提示
+    require_json_output: true        # 要求JSON格式输出
+
+  # 评分校准
+  score_calibration:
+    enabled: false                   # 是否启用校准
+    calibration_data_path: null      # 校准数据路径
+
+# 缓存配置
+cache:
+  enabled: true
+  cache_dir: ".cache/deepseek"
+  ttl: 86400                         # 缓存有效期（秒，24小时）
+  max_size_mb: 500                   # 最大缓存大小（MB）
+
+# 日志配置
+logging:
+  log_requests: true                 # 记录所有请求
+  log_responses: false               # 记录响应（可能很大）
+  log_errors: true                   # 记录错误
+  log_dir: "outputs/logs/api"
