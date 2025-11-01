@@ -298,7 +298,7 @@ def run_batch_test(use_llm_judge=True):
                     "scene_count": scene_count,
                     "overall_score": round(result.overall_score, 3),
                     "quality_level": result.quality_level,
-                    "passed": result.passed,
+                    "passed": "是" if result.passed else "否",
                     "scores": {
                         "structure": round(result.structure_score, 3),
                         "boundary": round(result.boundary_score, 3),

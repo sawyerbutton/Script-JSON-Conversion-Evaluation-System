@@ -287,6 +287,14 @@ class PerformanceProfiler:
             name1, time1, _ = self.checkpoints[i]
             name2, time2, _ = self.checkpoints[i + 1]
             duration = time2 - time1
+
+            # 修复负数时间问题：确保duration非负
+            if duration < 0:
+                logger.warning(
+                    f"性能计时器异常: {name1} → {name2} 的duration为负数({duration:.3f}秒)，已修正为0"
+                )
+                duration = 0.0
+
             percentage = (duration / total_time * 100) if total_time > 0 else 0
 
             segments.append(

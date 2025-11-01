@@ -9,6 +9,76 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+# 全局警告收集器（线程安全）
+_validation_warnings = []
+
+
+def add_validation_warning(message: str, severity: str = "WARNING"):
+    """添加验证警告"""
+    _validation_warnings.append({"severity": severity, "message": message})
+
+
+def get_and_clear_warnings():
+    """获取并清空警告列表"""
+    global _validation_warnings
+    warnings = _validation_warnings.copy()
+    _validation_warnings.clear()
+    return warnings
+
+
+def is_group_character(char_name: str) -> bool:
+    """
+    判断是否为群体角色
+
+    群体角色包括：学员、学子、兵组、家人、众人、群众等
+
+    Args:
+        char_name: 角色名称
+
+    Returns:
+        是否为群体角色
+    """
+    group_keywords = [
+        "学员", "学子", "学生",
+        "组", "兵", "士兵",
+        "众人", "人们", "群众", "大家",
+        "家人", "亲人", "亲戚",
+        "同学", "同事", "同僚",
+        "村民", "百姓", "居民",
+        "观众", "听众", "旁人"
+    ]
+    return any(keyword in char_name for keyword in group_keywords)
+
+
+def fuzzy_match_character(char_name: str, character_set: set) -> bool:
+    """
+    模糊匹配角色名称（支持别名和部分匹配）
+
+    匹配规则：
+    1. 精确匹配
+    2. 部分匹配：角色A包含角色B或角色B包含角色A
+    3. 示例：'张三' 可以匹配 '张三丰', '老张', '张三的朋友'
+
+    Args:
+        char_name: 要匹配的角色名称
+        character_set: 场景中的角色列表
+
+    Returns:
+        是否匹配成功
+    """
+    # 1. 精确匹配
+    if char_name in character_set:
+        return True
+
+    # 2. 部分匹配（至少2个字符）
+    if len(char_name) >= 2:
+        for char in character_set:
+            # A包含B 或 B包含A
+            if char_name in char or char in char_name:
+                return True
+
+    return False
+
 
 class TimeOfDay(str, Enum):
     """时间枚举"""
@@ -147,21 +217,36 @@ class SceneInfo(BaseModel):
 
     @model_validator(mode="after")
     def validate_scene_consistency(self):
-        """场景级别的一致性验证"""
+        """场景级别的一致性验证（支持群体角色和别名匹配）"""
 
         # 检查关系变化中的角色是否都在场景中出现
         characters = set(self.characters)
 
         for rel_change in self.relation_change:
             for char in rel_change.chars:
-                if char not in characters and char != "观众":
-                    # 警告但不阻止（某些情况下可能合理）
-                    print(f"警告: 关系变化涉及的角色 '{char}' 未在场景角色列表中")
+                # 跳过特殊角色和群体角色
+                if char == "观众" or is_group_character(char):
+                    continue
+
+                # 使用模糊匹配（支持别名）
+                if not fuzzy_match_character(char, characters):
+                    add_validation_warning(
+                        f"场景 {self.scene_id}: 关系变化涉及的角色 '{char}' 未在场景角色列表中",
+                        severity="WARNING"
+                    )
 
         # 检查信息变化的角色
         for info in self.info_change:
-            if info.character not in characters and info.character != "观众":
-                print(f"警告: 信息变化涉及的角色 '{info.character}' 未在场景角色列表中")
+            # 跳过特殊角色和群体角色
+            if info.character == "观众" or is_group_character(info.character):
+                continue
+
+            # 使用模糊匹配（支持别名）
+            if not fuzzy_match_character(info.character, characters):
+                add_validation_warning(
+                    f"场景 {self.scene_id}: 信息变化涉及的角色 '{info.character}' 未在场景角色列表中",
+                    severity="WARNING"
+                )
 
         return self
 
@@ -236,24 +321,43 @@ class OutlineSceneInfo(BaseModel):
         if not v:
             raise ValueError("至少需要一个关键事件")
         if len(v) > 5:
-            print(f"警告: 关键事件较多({len(v)}个)，建议精简到5个以内")
+            add_validation_warning(
+                f"关键事件较多({len(v)}个)，建议精简到5个以内",
+                severity="INFO"
+            )
         return v
 
     @model_validator(mode="after")
     def validate_outline_consistency(self):
-        """大纲的一致性验证（更宽松）"""
+        """大纲的一致性验证（更宽松，支持群体角色和别名匹配）"""
         # 检查关系变化中的角色（只警告，不报错）
         if self.characters:
             characters = set(self.characters)
             for rel_change in self.relation_change:
                 for char in rel_change.chars:
-                    if char not in characters and char != "观众":
-                        print(f"提示: 关系变化涉及的角色 '{char}' 未在场景角色列表中")
+                    # 跳过特殊角色和群体角色
+                    if char == "观众" or is_group_character(char):
+                        continue
+
+                    # 使用模糊匹配（支持别名）
+                    if not fuzzy_match_character(char, characters):
+                        add_validation_warning(
+                            f"场景 {self.scene_id}: 关系变化涉及的角色 '{char}' 未在场景角色列表中",
+                            severity="INFO"
+                        )
 
             # 检查信息变化的角色（只警告）
             for info in self.info_change:
-                if info.character not in characters and info.character != "观众":
-                    print(f"提示: 信息变化涉及的角色 '{info.character}' 未在场景角色列表中")
+                # 跳过特殊角色和群体角色
+                if info.character == "观众" or is_group_character(info.character):
+                    continue
+
+                # 使用模糊匹配（支持别名）
+                if not fuzzy_match_character(info.character, characters):
+                    add_validation_warning(
+                        f"场景 {self.scene_id}: 信息变化涉及的角色 '{info.character}' 未在场景角色列表中",
+                        severity="INFO"
+                    )
 
         return self
 
@@ -326,11 +430,18 @@ def validate_script_json(json_data: Dict[str, Any], scene_type: str = "standard"
         scene_type: "standard" 或 "outline"
 
     Returns:
-        验证结果字典
+        验证结果字典，包含:
+        - valid: 是否通过验证（仅指fatal错误）
+        - errors: 致命错误列表（导致验证失败）
+        - warnings: 警告列表（不影响验证通过）
+        - data: 验证后的数据
     """
     result = {"valid": False, "errors": [], "warnings": [], "data": None}
 
     try:
+        # 清空之前的警告
+        get_and_clear_warnings()
+
         # 根据类型选择模型
         model_class = SceneInfo if scene_type == "standard" else OutlineSceneInfo
 
@@ -344,6 +455,10 @@ def validate_script_json(json_data: Dict[str, Any], scene_type: str = "standard"
                 except Exception as e:
                     result["errors"].append(f"场景 {i+1} 验证失败: {str(e)}")
 
+            # 收集验证过程中的警告
+            validation_warnings = get_and_clear_warnings()
+            result["warnings"] = [w["message"] for w in validation_warnings]
+
             if not result["errors"]:
                 result["valid"] = True
                 result["data"] = [scene.dict() for scene in validated_scenes]
@@ -354,8 +469,15 @@ def validate_script_json(json_data: Dict[str, Any], scene_type: str = "standard"
             result["valid"] = True
             result["data"] = scene.dict()
 
+            # 收集验证过程中的警告
+            validation_warnings = get_and_clear_warnings()
+            result["warnings"] = [w["message"] for w in validation_warnings]
+
     except Exception as e:
         result["errors"].append(f"验证失败: {str(e)}")
+        # 即使失败也要收集警告
+        validation_warnings = get_and_clear_warnings()
+        result["warnings"] = [w["message"] for w in validation_warnings]
 
     return result
 
