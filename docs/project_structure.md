@@ -194,37 +194,6 @@ python scripts/batch_evaluate.py --dir ./test_data/scene1/ --output ./reports/
 python scripts/generate_report.py --results ./outputs/results.json --format html
 ```
 
-## Docker部署（可选）
-
-### Dockerfile
-```dockerfile
-FROM python:3.9-slim
-
-WORKDIR /app
-
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-COPY . .
-
-CMD ["python", "src/main_evaluator.py"]
-```
-
-### docker-compose.yml
-```yaml
-version: '3.8'
-
-services:
-  evaluator:
-    build: .
-    volumes:
-      - ./data:/app/data
-      - ./outputs:/app/outputs
-    env_file:
-      - .env
-    command: python scripts/batch_evaluate.py
-```
-
 ## 开发工作流
 
 ### 1. 初始设置

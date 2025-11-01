@@ -84,44 +84,7 @@ script-evaluation-system/
 
 ## 🚀 快速开始
 
-### 方式一：使用Docker（推荐 - 无需Python环境）
-
-**前置要求：** 仅需 Docker 和 Docker Compose
-
-```bash
-# 1. 克隆仓库
-git clone <repository-url>
-cd Script-JSON-Conversion-Evaluation-System
-
-# 2. 配置环境变量
-cp .env.example .env
-# 编辑.env添加DeepSeek API Key
-
-# 3. 一键启动（构建+启动）
-make quickstart
-
-# 4. 进入开发容器
-make dev-shell
-
-# 或访问Jupyter Notebook
-# http://localhost:8888
-```
-
-**Docker常用命令：**
-```bash
-make help           # 查看所有可用命令
-make dev-up         # 启动开发环境
-make dev-shell      # 进入开发容器
-make test-all       # 运行所有测试
-make dev-logs       # 查看日志
-make dev-down       # 停止环境
-```
-
-详细的Docker使用指南请查看 [docs/docker_guide.md](docs/docker_guide.md)
-
----
-
-### 方式二：本地Python环境
+### 本地Python环境
 
 #### 1. 环境准备
 
@@ -333,7 +296,6 @@ python scripts/test_system.py
 
 - 📖 [项目结构说明](docs/project_structure.md)
 - 🚀 [快速开始指南](docs/quick_start_guide.md)
-- 🐳 [Docker使用指南](docs/docker_guide.md) ⭐ **推荐**
 - ✅ [开发任务清单](docs/script_eval_development_checklist.md)
 
 ## 技术栈
@@ -346,18 +308,6 @@ python scripts/test_system.py
 - **数据处理**: Pandas, NumPy
 - **测试框架**: Pytest
 
-## 🐳 Docker支持
-
-本项目提供完整的容器化方案，支持在**仅安装Docker**的服务器上进行开发、测试和部署：
-
-- ✅ 多阶段构建（开发/测试/生产）
-- ✅ 支持Jupyter Notebook和VS Code Server
-- ✅ 一键启动开发环境
-- ✅ 完整的测试环境
-- ✅ 生产级部署配置
-
-详见 [Docker使用指南](docs/docker_guide.md)
-
 ## 路线图
 
 ### 已完成
@@ -367,7 +317,6 @@ python scripts/test_system.py
 - [x] 三层评估架构
 - [x] 基础评估指标
 - [x] 报告生成系统
-- [x] 完整的Docker容器化方案 🆕
 
 ### 进行中
 - [ ] 完整的单元测试覆盖
@@ -379,7 +328,6 @@ python scripts/test_system.py
 - [ ] 评估结果可视化仪表板
 - [ ] 更多评估指标（MINEA、异常检测等）
 - [ ] 多语言支持
-- [ ] Docker容器化部署
 
 ## 贡献
 
