@@ -41,6 +41,19 @@ This document provides pointers to important documentation and resources for AI-
    - LLM client usage
    - Error handling
 
+5. **[Scripts Guide](ref/scripts-guide.md)**
+   - All 5 conversion and evaluation scripts
+   - Usage examples and parameters
+   - Batch processing patterns
+   - Cost estimation and API usage
+
+6. **[Models Reference](ref/models-reference.md)**
+   - Complete Pydantic model documentation
+   - SceneInfo vs OutlineSceneInfo comparison
+   - Field validation rules and examples
+   - Pydantic V2 migration notes
+   - Common validation errors
+
 ### Detailed Documentation (docs/)
 
 - **[Project Structure](docs/project_structure.md)** - Detailed file organization
@@ -61,12 +74,35 @@ cp .env.example .env  # Add DEEPSEEK_API_KEY
 python scripts/test_system.py
 ```
 
+### For Running Scripts
+
+```bash
+# Convert script to JSON only
+python scripts/convert_script_to_json.py script_examples/测试1.md
+
+# Convert outline to JSON only
+python scripts/convert_outline_to_json.py 故事大纲示例.md
+
+# Full script evaluation (with LLM semantic evaluation)
+python scripts/run_full_evaluation.py script_examples/测试1.md
+
+# Full outline evaluation
+python scripts/run_outline_evaluation.py 故事大纲示例.md
+
+# Skip LLM evaluation (faster, cheaper)
+python scripts/run_full_evaluation.py script_examples/测试1.md --no-llm-judge
+```
+
+See **[ref/scripts-guide.md](ref/scripts-guide.md)** for complete script documentation.
+
 ### For Understanding the Codebase
 
 1. Start with **[ref/project-overview.md](ref/project-overview.md)** for high-level understanding
 2. Review **[ref/architecture.md](ref/architecture.md)** for system design
-3. Check **[ref/api-reference.md](ref/api-reference.md)** for code APIs
-4. Read **[ref/development.md](ref/development.md)** for development workflows
+3. Check **[ref/scripts-guide.md](ref/scripts-guide.md)** for script usage
+4. Read **[ref/models-reference.md](ref/models-reference.md)** for data model details
+5. Check **[ref/api-reference.md](ref/api-reference.md)** for code APIs
+6. Read **[ref/development.md](ref/development.md)** for development workflows
 
 ---
 
@@ -164,9 +200,9 @@ Script-JSON-Conversion-Evaluation-System/
 ├── docs/                   # Detailed documentation
 ├── ref/                    # Reference docs (this directory)
 ├── scripts/                # Utility scripts
-├── docker-compose*.yml     # Docker configurations
-├── Dockerfile              # Container definition
-├── Makefile               # Command shortcuts
+├── requirements.txt        # Python dependencies
+├── setup.py               # Package setup
+├── pyproject.toml         # Project configuration
 └── CLAUDE.md              # This file
 ```
 
@@ -273,7 +309,7 @@ pytest tests/unit/ --pdb # Debug with pdb
 - Follow PEP 8
 - Use type hints
 - Write docstrings
-- Format with black (`make fmt`)
+- Format with black (`black src/ tests/`)
 
 ### Testing
 - Unit test coverage > 80%
@@ -291,9 +327,9 @@ pytest tests/unit/ --pdb # Debug with pdb
 1. Create feature branch
 2. Write tests first (TDD)
 3. Implement feature
-4. Run tests (`make test-all`)
-5. Format code (`make fmt`)
-6. Lint code (`make lint`)
+4. Run tests (`pytest tests/`)
+5. Format code (`black src/ tests/`)
+6. Lint code (`flake8 src/ tests/`)
 7. Commit and push
 
 ---
@@ -319,10 +355,14 @@ pytest tests/unit/ --pdb # Debug with pdb
 For new contributors:
 1. [ref/project-overview.md](ref/project-overview.md) - Start here
 2. [ref/architecture.md](ref/architecture.md) - Understand design
-3. [ref/development.md](ref/development.md) - Development guide
-4. [ref/api-reference.md](ref/api-reference.md) - API details
+3. [ref/scripts-guide.md](ref/scripts-guide.md) - Learn script usage
+4. [ref/models-reference.md](ref/models-reference.md) - Understand data models
+5. [ref/development.md](ref/development.md) - Development guide
+6. [ref/api-reference.md](ref/api-reference.md) - API details
 
 For specific tasks:
+- **Running scripts**: [ref/scripts-guide.md](ref/scripts-guide.md)
+- **Understanding models**: [ref/models-reference.md](ref/models-reference.md)
 - **Adding features**: [ref/development.md](ref/development.md)
 - **API usage**: [ref/api-reference.md](ref/api-reference.md)
 - **Development workflow**: [ref/development.md](ref/development.md)
@@ -330,8 +370,17 @@ For specific tasks:
 ### Commands Reference
 
 ```bash
-pytest tests/        # Run all tests
+# Testing
+pytest tests/                    # Run all tests
 python scripts/test_system.py  # Run system tests
+
+# Conversion & Evaluation
+python scripts/convert_script_to_json.py <script.md>      # Convert script to JSON
+python scripts/convert_outline_to_json.py <outline.md>    # Convert outline to JSON
+python scripts/run_full_evaluation.py <script.md>         # Full script evaluation
+python scripts/run_outline_evaluation.py <outline.md>     # Full outline evaluation
+
+# Code Quality
 black src/ tests/    # Format code
 flake8 src/ tests/   # Lint code
 mypy src/            # Type check

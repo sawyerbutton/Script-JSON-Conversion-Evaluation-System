@@ -27,7 +27,6 @@ This system evaluates the quality of converting screenplay/script text into stru
 - Rich evaluation metrics (F1, Precision, Recall for boundaries, character extraction)
 - DeepSeek API integration with smart retry and cost tracking
 - Detailed reporting (JSON and HTML formats)
-- Full Docker containerization support
 
 ## Project Structure
 
