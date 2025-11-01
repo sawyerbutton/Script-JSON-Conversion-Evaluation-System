@@ -4,10 +4,10 @@
 """
 
 import json
+import logging
 import os
 from pathlib import Path
-from typing import Dict, List, Any, Optional, Union
-import logging
+from typing import Any, Dict, List, Union
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +16,7 @@ class FileHandler:
     """文件处理器"""
 
     @staticmethod
-    def read_text_file(file_path: Union[str, Path], encoding: str = 'utf-8') -> str:
+    def read_text_file(file_path: Union[str, Path], encoding: str = "utf-8") -> str:
         """
         读取文本文件
 
@@ -28,7 +28,7 @@ class FileHandler:
             文件内容
         """
         try:
-            with open(file_path, 'r', encoding=encoding) as f:
+            with open(file_path, "r", encoding=encoding) as f:
                 content = f.read()
             logger.info(f"成功读取文件: {file_path}")
             return content
@@ -40,7 +40,7 @@ class FileHandler:
             raise
 
     @staticmethod
-    def read_json_file(file_path: Union[str, Path], encoding: str = 'utf-8') -> Any:
+    def read_json_file(file_path: Union[str, Path], encoding: str = "utf-8") -> Any:
         """
         读取JSON文件
 
@@ -52,7 +52,7 @@ class FileHandler:
             解析后的JSON对象
         """
         try:
-            with open(file_path, 'r', encoding=encoding) as f:
+            with open(file_path, "r", encoding=encoding) as f:
                 data = json.load(f)
             logger.info(f"成功读取JSON文件: {file_path}")
             return data
@@ -65,10 +65,7 @@ class FileHandler:
 
     @staticmethod
     def write_text_file(
-        file_path: Union[str, Path],
-        content: str,
-        encoding: str = 'utf-8',
-        create_dirs: bool = True
+        file_path: Union[str, Path], content: str, encoding: str = "utf-8", create_dirs: bool = True
     ) -> None:
         """
         写入文本文件
@@ -85,7 +82,7 @@ class FileHandler:
             if create_dirs:
                 file_path.parent.mkdir(parents=True, exist_ok=True)
 
-            with open(file_path, 'w', encoding=encoding) as f:
+            with open(file_path, "w", encoding=encoding) as f:
                 f.write(content)
 
             logger.info(f"成功写入文件: {file_path}")
@@ -97,10 +94,10 @@ class FileHandler:
     def write_json_file(
         file_path: Union[str, Path],
         data: Any,
-        encoding: str = 'utf-8',
+        encoding: str = "utf-8",
         ensure_ascii: bool = False,
         indent: int = 2,
-        create_dirs: bool = True
+        create_dirs: bool = True,
     ) -> None:
         """
         写入JSON文件
@@ -119,7 +116,7 @@ class FileHandler:
             if create_dirs:
                 file_path.parent.mkdir(parents=True, exist_ok=True)
 
-            with open(file_path, 'w', encoding=encoding) as f:
+            with open(file_path, "w", encoding=encoding) as f:
                 json.dump(data, f, ensure_ascii=ensure_ascii, indent=indent)
 
             logger.info(f"成功写入JSON文件: {file_path}")
@@ -129,9 +126,7 @@ class FileHandler:
 
     @staticmethod
     def list_files(
-        directory: Union[str, Path],
-        pattern: str = "*",
-        recursive: bool = False
+        directory: Union[str, Path], pattern: str = "*", recursive: bool = False
     ) -> List[Path]:
         """
         列出目录中的文件
@@ -202,7 +197,7 @@ class FileHandler:
             "modified": stat.st_mtime,
             "is_file": file_path.is_file(),
             "is_dir": file_path.is_dir(),
-            "extension": file_path.suffix
+            "extension": file_path.suffix,
         }
 
 
@@ -211,8 +206,7 @@ class ScriptLoader:
 
     @staticmethod
     def load_script_pair(
-        script_file: Union[str, Path],
-        json_file: Union[str, Path]
+        script_file: Union[str, Path], json_file: Union[str, Path]
     ) -> Dict[str, Any]:
         """
         加载剧本文本和对应的JSON
@@ -233,14 +227,12 @@ class ScriptLoader:
             "script_text": script_text,
             "extracted_json": extracted_json,
             "script_file": str(Path(script_file).name),
-            "json_file": str(Path(json_file).name)
+            "json_file": str(Path(json_file).name),
         }
 
     @staticmethod
     def load_test_cases_from_directory(
-        directory: Union[str, Path],
-        script_pattern: str = "*.txt",
-        scene_type: str = "standard"
+        directory: Union[str, Path], script_pattern: str = "*.txt", scene_type: str = "standard"
     ) -> List[Dict[str, Any]]:
         """
         从目录加载测试用例
@@ -265,7 +257,7 @@ class ScriptLoader:
 
         for script_file in script_files:
             # 查找对应的JSON文件
-            json_file = script_file.with_suffix('.json')
+            json_file = script_file.with_suffix(".json")
 
             if not json_file.exists():
                 logger.warning(f"未找到对应的JSON文件: {json_file}")
@@ -292,11 +284,7 @@ if __name__ == "__main__":
     handler = FileHandler()
 
     # 写入测试文件
-    test_data = {
-        "scene_id": "S01",
-        "setting": "测试场景",
-        "characters": ["角色A", "角色B"]
-    }
+    test_data = {"scene_id": "S01", "setting": "测试场景", "characters": ["角色A", "角色B"]}
 
     handler.write_json_file("test_output.json", test_data)
 

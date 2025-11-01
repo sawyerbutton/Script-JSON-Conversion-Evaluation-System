@@ -10,27 +10,53 @@
 {outline_text}
 
 ## 输出格式要求
-请按照以下JSON Schema输出（与场景1类似，但更灵活）：
+请严格按照以下JSON Schema输出（与场景1类似，但更灵活）：
 
 ```json
 [
   {
-    "scene_id": "场景标识（格式：S1, S2...简化格式）",
-    "setting": "场景环境（如果大纲未明确说明，可以推断并标注'推断：...'）",
+    "scene_id": "场景标识（格式：S0, S1, S2...简化格式，从S0或S1开始）",
+    "setting": "场景环境（如果大纲未明确说明，可以推断并标注'推断：...'，或者'背景说明'等）",
     "characters": ["推断的主要角色"],
     "scene_mission": "场景的戏剧功能（这个是核心，必须准确）",
     "key_events": [
       "关键事件1",
       "关键事件2",
-      "..."
+      "关键事件3",
+      "关键事件4（大纲允许1-5个事件）",
+      "关键事件5"
     ],
-    "info_change": [...],
-    "relation_change": [...],
-    "key_object": [...],
-    "setup_payoff": {...}
+    "info_change": [
+      {
+        "character": "角色名或'观众'",
+        "learned": "获得的新信息"
+      }
+    ],
+    "relation_change": [
+      {
+        "chars": ["角色1", "角色2"],
+        "from": "原始关系",
+        "to": "变化后的关系"
+      }
+    ],
+    "key_object": [
+      {
+        "object": "物品名称",
+        "status": "物品状态或作用"
+      }
+    ],
+    "setup_payoff": {
+      "setup_for": ["S3", "S5"],
+      "payoff_from": []
+    }
   }
 ]
 ```
+
+**重要：relation_change格式必须严格遵守**
+- 必须使用 "chars" 而不是 "characters"
+- 必须使用 "from" 和 "to" 作为字段名
+- chars 必须是包含恰好2个角色的数组
 
 ## 提取规则（相比场景1更灵活）
 
@@ -55,9 +81,10 @@
 - 例如："建立主角的悲惨背景"、"引入反派角色"
 
 ### 5. 关键事件
-- 大纲的关键事件可能比场景1多（1-5个）
+- 大纲的关键事件可能比场景1多（**允许1-5个**）
 - 因为大纲是浓缩叙述，一段可能包含多个事件
 - 按顺序列出
+- 如果事件很多，选择最关键的5个
 
 ### 6. 推断与标注
 - **允许合理推断**，但要明确标注
@@ -89,6 +116,16 @@
 ### 角色弧光
 注意关注角色的变化弧光，在relation_change和info_change中体现。
 
+**relation_change格式示例（严格遵守）：**
+```json
+{
+  "chars": ["主角", "反派"],
+  "from": "陌生人",
+  "to": "宿敌"
+}
+```
+注意：不要使用 "characters" 字段，必须是 "chars"！
+
 ## 注意事项
 1. **灵活但不随意**：推断要有依据
 2. **标注推断内容**：让用户知道哪些是原文，哪些是推断
@@ -96,38 +133,64 @@
 4. **聚焦叙事功能**：scene_mission是核心
 5. **可以简化**：如果某些字段确实无法填写，可以留空数组
 
-## 示例输出
+## 示例输出（完整格式参考）
+
+### 示例1：背景说明场景
 ```json
-[
-  {
-    "scene_id": "S1",
-    "setting": "推断：城市街道",
-    "characters": ["主角"],
-    "scene_mission": "展现主角的日常生活和困境",
-    "key_events": [
-      "主角失业",
-      "接到神秘电话",
-      "决定接受挑战"
-    ],
-    "info_change": [
-      {
-        "character": "观众",
-        "learned": "主角处境艰难但勇敢"
-      }
-    ],
-    "relation_change": [],
-    "key_object": [
-      {
-        "object": "神秘信封",
-        "status": "推动情节的关键物"
-      }
-    ],
-    "setup_payoff": {
-      "setup_for": ["S3"],
-      "payoff_from": []
+{
+  "scene_id": "S0",
+  "setting": "背景说明",
+  "characters": [],
+  "scene_mission": "建立故事世界观",
+  "key_events": ["介绍时空背景", "说明主要设定"],
+  "info_change": [{"character": "观众", "learned": "故事发生在未来世界"}],
+  "relation_change": [],
+  "key_object": [],
+  "setup_payoff": {"setup_for": ["S1"], "payoff_from": []}
+}
+```
+
+### 示例2：普通叙事场景
+```json
+{
+  "scene_id": "S1",
+  "setting": "推断：城市街道",
+  "characters": ["主角", "神秘人"],
+  "scene_mission": "展现主角的日常困境并引入冲突",
+  "key_events": [
+    "主角失业",
+    "接到神秘电话",
+    "遇到神秘人",
+    "接受挑战"
+  ],
+  "info_change": [
+    {
+      "character": "观众",
+      "learned": "主角处境艰难但勇敢"
+    },
+    {
+      "character": "主角",
+      "learned": "有人在寻找他"
     }
+  ],
+  "relation_change": [
+    {
+      "chars": ["主角", "神秘人"],
+      "from": "陌生",
+      "to": "雇佣关系"
+    }
+  ],
+  "key_object": [
+    {
+      "object": "神秘信封",
+      "status": "推动情节的关键物"
+    }
+  ],
+  "setup_payoff": {
+    "setup_for": ["S3", "S5"],
+    "payoff_from": []
   }
-]
+}
 ```
 
 现在请开始提取，直接输出JSON：

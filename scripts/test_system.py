@@ -4,15 +4,14 @@
 用于快速测试评估系统是否正常工作
 """
 
-import sys
 import os
+import sys
 from pathlib import Path
 
 # 添加src到路径
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-import json
-from evaluators.main_evaluator import ScriptEvaluator, EvaluationConfig
+from evaluators.main_evaluator import EvaluationConfig, ScriptEvaluator  # noqa: E402
 
 
 def test_basic_evaluation():
@@ -27,7 +26,7 @@ def test_basic_evaluation():
         use_deepseek_judge=False,  # 测试时关闭LLM评估（避免API调用）
         run_consistency_check=False,
         save_detailed_report=True,
-        save_html_report=False
+        save_html_report=False,
     )
 
     print("\n配置评估器...")
@@ -61,41 +60,21 @@ def test_basic_evaluation():
 够了。我们结束了。
 
 她快步离开，留下李雷一个人呆坐在那里。""",
-
         "extracted_json": [
             {
                 "scene_id": "S01",
                 "setting": "内景 咖啡馆 - 日",
                 "characters": ["李雷", "韩梅梅"],
                 "scene_mission": "展现两人关系的破裂",
-                "key_events": [
-                    "韩梅梅冷漠地到来",
-                    "李雷试图解释被拒绝",
-                    "韩梅梅宣布分手离开"
-                ],
-                "info_change": [
-                    {
-                        "character": "观众",
-                        "learned": "两人关系出现重大危机"
-                    }
-                ],
-                "relation_change": [
-                    {
-                        "chars": ["李雷", "韩梅梅"],
-                        "from": "恋人",
-                        "to": "分手"
-                    }
-                ],
+                "key_events": ["韩梅梅冷漠地到来", "李雷试图解释被拒绝", "韩梅梅宣布分手离开"],
+                "info_change": [{"character": "观众", "learned": "两人关系出现重大危机"}],
+                "relation_change": [{"chars": ["李雷", "韩梅梅"], "from": "恋人", "to": "分手"}],
                 "key_object": [],
-                "setup_payoff": {
-                    "setup_for": [],
-                    "payoff_from": []
-                }
+                "setup_payoff": {"setup_for": [], "payoff_from": []},
             }
         ],
-
         "scene_type": "standard",
-        "source_file": "test_script_01.txt"
+        "source_file": "test_script_01.txt",
     }
 
     print("\n准备测试数据...")
@@ -146,6 +125,7 @@ def test_basic_evaluation():
     except Exception as e:
         print(f"\n❌ 测试失败: {e}")
         import traceback
+
         traceback.print_exc()
         return False
 
@@ -166,7 +146,7 @@ def test_model_validation():
             "setting": "内景 咖啡馆 - 日",
             "characters": ["角色A", "角色B"],
             "scene_mission": "测试场景",
-            "key_events": ["事件1"]
+            "key_events": ["事件1"],
         }
 
         print("\n测试有效数据...")
@@ -185,7 +165,7 @@ def test_model_validation():
             "setting": "某个地方",  # 缺少内外景标记
             "characters": [],
             "scene_mission": "测试",
-            "key_events": []  # 不能为空
+            "key_events": [],  # 不能为空
         }
 
         print("\n测试无效数据（应该失败）...")
@@ -205,6 +185,7 @@ def test_model_validation():
     except Exception as e:
         print(f"\n❌ 模型验证测试失败: {e}")
         import traceback
+
         traceback.print_exc()
         return False
 
@@ -222,10 +203,7 @@ def test_file_handler():
         handler = FileHandler()
 
         # 测试写入和读取
-        test_data = {
-            "test": "数据",
-            "中文": "支持"
-        }
+        test_data = {"test": "数据", "中文": "支持"}
 
         test_file = "test_temp.json"
 
@@ -250,6 +228,7 @@ def test_file_handler():
     except Exception as e:
         print(f"\n❌ 文件处理测试失败: {e}")
         import traceback
+
         traceback.print_exc()
         return False
 
