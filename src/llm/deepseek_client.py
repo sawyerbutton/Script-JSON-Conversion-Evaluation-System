@@ -4,7 +4,6 @@ DeepSeek API 客户端封装
 """
 
 import json
-import logging
 import os
 import time
 from dataclasses import dataclass
@@ -14,11 +13,34 @@ import openai
 from dotenv import load_dotenv
 from openai import OpenAI
 
+# 导入自定义异常和日志
+try:
+    # 尝试相对导入
+    from ..utils.exceptions import (
+        APIConnectionError,
+        APIQuotaExceededError,
+        APIRateLimitError,
+        APIResponseError,
+        APITimeoutError,
+    )
+    from ..utils.logger import get_logger
+    from ..utils.performance import APICallTracker, timer
+except ImportError:
+    # 从scripts运行时直接导入（src已在sys.path中）
+    from utils.exceptions import (
+        APIConnectionError,
+        APIQuotaExceededError,
+        APIRateLimitError,
+        APIResponseError,
+        APITimeoutError,
+    )
+    from utils.logger import get_logger
+    from utils.performance import APICallTracker, timer
+
 load_dotenv()
 
 # 配置日志
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 @dataclass
@@ -37,19 +59,29 @@ class DeepSeekConfig:
 class DeepSeekClient:
     """DeepSeek API客户端"""
 
-    def __init__(self, config: Optional[DeepSeekConfig] = None):
+    def __init__(self, config: Optional[DeepSeekConfig] = None, debug: bool = False):
         if config is None:
-            config = DeepSeekConfig(
-                api_key=os.getenv("DEEPSEEK_API_KEY", ""),
-            )
+            api_key = os.getenv("DEEPSEEK_API_KEY", "")
+            if not api_key:
+                logger.warning("DEEPSEEK_API_KEY未设置，API调用将失败")
+            config = DeepSeekConfig(api_key=api_key)
 
         self.config = config
-        self.client = OpenAI(api_key=config.api_key, base_url=config.base_url)
+        self.debug = debug
+
+        try:
+            self.client = OpenAI(api_key=config.api_key, base_url=config.base_url)
+            logger.info(f"DeepSeek客户端初始化成功 (model: {config.model})")
+        except Exception as e:
+            logger.error(f"DeepSeek客户端初始化失败: {e}")
+            raise APIConnectionError("无法初始化DeepSeek客户端", details={"error": str(e)})
 
         # 用于成本追踪
         self.total_tokens = 0
         self.total_cost = 0.0
+        self.api_tracker = APICallTracker()
 
+    @timer(name="DeepSeek API调用")
     def complete(
         self,
         prompt: str,
@@ -71,7 +103,7 @@ class DeepSeekClient:
         Returns:
             包含响应和元数据的字典
         """
-
+        start_time = time.time()
         messages = []
         if system_prompt:
             messages.append({"role": "system", "content": system_prompt})
@@ -80,7 +112,11 @@ class DeepSeekClient:
         temperature = temperature or self.config.temperature
         max_tokens = max_tokens or self.config.max_tokens
 
+        if self.debug:
+            logger.debug(f"API请求 - 温度: {temperature}, 最大tokens: {max_tokens}")
+
         # 重试机制
+        last_error = None
         for attempt in range(self.config.max_retries):
             try:
                 # 构建请求参数
@@ -96,6 +132,7 @@ class DeepSeekClient:
                     kwargs["response_format"] = response_format
 
                 # 发送请求
+                logger.debug(f"发送API请求 (尝试 {attempt + 1}/{self.config.max_retries})")
                 response = self.client.chat.completions.create(**kwargs)
 
                 # 提取内容
@@ -107,37 +144,103 @@ class DeepSeekClient:
                         content = json.loads(content)
                     except json.JSONDecodeError as e:
                         logger.warning(f"JSON解析失败: {e}")
+                        raise APIResponseError(
+                            "API返回的JSON格式不正确",
+                            details={"content": content[:200], "error": str(e)},
+                        )
 
                 # 更新token统计
                 usage = response.usage
-                self.total_tokens += usage.total_tokens
-                self._update_cost(usage.total_tokens)
+                tokens_used = usage.total_tokens
+                self.total_tokens += tokens_used
+                cost = self._update_cost(tokens_used)
+
+                # 记录API调用
+                duration = time.time() - start_time
+                self.api_tracker.record_call(
+                    endpoint=self.config.model,
+                    duration=duration,
+                    tokens=tokens_used,
+                    cost=cost,
+                    success=True,
+                )
+
+                logger.info(
+                    f"API调用成功 - tokens: {tokens_used}, 耗时: {duration:.2f}秒, "
+                    f"成本: ¥{cost:.4f}"
+                )
 
                 # 返回结果
                 return {
                     "content": content,
                     "raw_response": response,
-                    "tokens_used": usage.total_tokens,
+                    "tokens_used": tokens_used,
                     "model": response.model,
                     "finish_reason": response.choices[0].finish_reason,
                 }
 
-            except openai.RateLimitError:
-                logger.warning(f"触发限流，等待{self.config.retry_delay}秒后重试...")
-                time.sleep(self.config.retry_delay)
+            except openai.RateLimitError as e:
+                last_error = e
+                logger.warning(
+                    f"触发限流 (尝试 {attempt + 1}/{self.config.max_retries})，"
+                    f"等待{self.config.retry_delay}秒后重试..."
+                )
+                if attempt < self.config.max_retries - 1:
+                    time.sleep(self.config.retry_delay)
+                else:
+                    # 记录失败
+                    self.api_tracker.record_call(
+                        endpoint=self.config.model,
+                        duration=time.time() - start_time,
+                        success=False,
+                        error="Rate limit exceeded",
+                    )
+                    raise APIRateLimitError(
+                        "API请求频率超限，已达到最大重试次数",
+                        details={"attempts": self.config.max_retries},
+                    )
 
             except openai.APIError as e:
+                last_error = e
                 logger.error(f"API错误 (尝试 {attempt + 1}/{self.config.max_retries}): {e}")
                 if attempt < self.config.max_retries - 1:
                     time.sleep(self.config.retry_delay)
                 else:
-                    raise
+                    # 记录失败
+                    self.api_tracker.record_call(
+                        endpoint=self.config.model,
+                        duration=time.time() - start_time,
+                        success=False,
+                        error=str(e),
+                    )
+                    raise APIConnectionError(
+                        f"API调用失败，已达到最大重试次数: {str(e)}",
+                        details={"attempts": self.config.max_retries, "error": str(e)},
+                    )
 
-            except Exception as e:
-                logger.error(f"未预期的错误: {e}")
+            except APIResponseError:
+                # JSON解析错误，不重试
                 raise
 
-        raise Exception("达到最大重试次数")
+            except Exception as e:
+                last_error = e
+                logger.error(f"未预期的错误: {e}")
+                self.api_tracker.record_call(
+                    endpoint=self.config.model,
+                    duration=time.time() - start_time,
+                    success=False,
+                    error=str(e),
+                )
+                raise APIConnectionError(
+                    f"API调用出现未预期错误: {str(e)}",
+                    details={"error": str(e)},
+                )
+
+        # 不应该到达这里
+        raise APIConnectionError(
+            "达到最大重试次数",
+            details={"attempts": self.config.max_retries, "last_error": str(last_error)},
+        )
 
     def batch_complete(
         self, prompts: List[str], system_prompt: Optional[str] = None, **kwargs
@@ -213,25 +316,42 @@ class DeepSeekClient:
 
         return response
 
-    def _update_cost(self, tokens: int):
+    def _update_cost(self, tokens: int) -> float:
         """
         更新成本统计
 
         DeepSeek定价参考（需要根据实际价格更新）：
         - 输入: ¥1 / 1M tokens
         - 输出: ¥2 / 1M tokens
+
+        Returns:
+            本次调用的成本
         """
         # 简化计算，假设输入输出各占一半
         estimated_cost = tokens * 1.5 / 1_000_000  # ¥
         self.total_cost += estimated_cost
+        return estimated_cost
 
     def get_usage_stats(self) -> Dict[str, Any]:
         """获取使用统计"""
+        api_stats = self.api_tracker.get_stats()
         return {
             "total_tokens": self.total_tokens,
             "total_cost_rmb": round(self.total_cost, 4),
             "average_tokens_per_request": self.total_tokens / max(1, self._request_count),
+            "api_calls": api_stats,
         }
+
+    def get_api_stats(self) -> Dict[str, Any]:
+        """获取API调用统计"""
+        return self.api_tracker.get_stats()
+
+    def print_stats(self):
+        """打印统计信息"""
+        logger.info("=== DeepSeek API 使用统计 ===")
+        logger.info(f"总Token数: {self.total_tokens}")
+        logger.info(f"总成本: ¥{self.total_cost:.4f}")
+        self.api_tracker.print_summary()
 
     @property
     def _request_count(self) -> int:

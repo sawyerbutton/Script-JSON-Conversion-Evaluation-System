@@ -11,7 +11,11 @@ import numpy as np
 from deepeval.metrics import BaseMetric
 from deepeval.test_case import LLMTestCase
 
-from llm.deepseek_client import DeepSeekClient
+try:
+    from ..llm.deepseek_client import DeepSeekClient
+except ImportError:
+    # 从scripts运行时直接导入（src已在sys.path中）
+    from llm.deepseek_client import DeepSeekClient
 
 
 class SceneBoundaryMetric(BaseMetric):
@@ -127,8 +131,11 @@ class SceneBoundaryMetric(BaseMetric):
 
         try:
             result = response["content"]
+            # 如果content是字符串，先解析
+            if isinstance(result, str):
+                result = json.loads(result)
             return result.get("score", 0.5)
-        except (KeyError, TypeError, ValueError):
+        except (KeyError, TypeError, ValueError, AttributeError, json.JSONDecodeError):
             return 0.5  # 默认中等分数
 
     def _check_id_continuity(self, scene_ids: List[str]) -> float:
@@ -374,8 +381,11 @@ class CharacterExtractionMetric(BaseMetric):
 
         try:
             result = response["content"]
+            # 如果content是字符串，先解析
+            if isinstance(result, str):
+                result = json.loads(result)
             return result.get("score", 0.7)
-        except (KeyError, TypeError, ValueError):
+        except (KeyError, TypeError, ValueError, AttributeError, json.JSONDecodeError):
             return 0.7
 
     def _generate_character_reason(self):
