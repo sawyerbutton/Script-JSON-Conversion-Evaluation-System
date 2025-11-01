@@ -33,9 +33,13 @@
 
 - 🤖 **智能LLM集成**
   - DeepSeek API自动转换剧本为JSON
+  - **智能模型选择**：自动根据文件大小选择最佳模型
+    - 小文件（< 12K字符）：deepseek-chat（8K输出，速度快）
+    - 大文件（>= 12K字符）：deepseek-reasoner（32K输出，支持复杂推理）
   - 专门优化的prompt模板（scene1/scene2）
   - LLM-as-Judge语义评估
   - 智能重试和错误处理
+  - **强大的后处理系统**：自动清理思考过程，提取JSON，修复常见问题
 
 - 📁 **清晰的项目结构**
   - 输出文件自动分类管理（outputs/converted/, outputs/reports/）
@@ -59,19 +63,23 @@ Script-JSON-Conversion-Evaluation-System/
 │   └── utils/                # 工具函数
 │       └── file_handler.py
 │
-├── scripts/                  # 核心脚本（5个）
+├── scripts/                  # 核心脚本
 │   ├── test_system.py        # 系统测试（无需API）
 │   ├── convert_script_to_json.py      # 标准剧本→JSON转换
 │   ├── convert_outline_to_json.py     # 故事大纲→JSON转换
 │   ├── run_full_evaluation.py         # 标准剧本完整评估
-│   └── run_outline_evaluation.py      # 故事大纲完整评估
+│   ├── run_outline_evaluation.py      # 故事大纲完整评估
+│   ├── batch_test_all_scripts.py      # 批量测试所有剧本
+│   └── test_single_large_file.py      # 单文件测试工具
 │
 ├── script_examples/          # 测试样本
-│   ├── 测试1.md              # 标准剧本示例
-│   ├── 测试2.md
-│   ├── 测试3.md
-│   ├── 测试4.md
-│   └── 故事大纲示例.md       # 故事大纲示例
+│   ├── scripts/              # 标准剧本示例
+│   │   ├── script_01_wuxia_tech.md
+│   │   ├── script_02_palace_tech.md
+│   │   ├── script_03_cultivation_tech.md
+│   │   └── script_04_ecommerce_ancient.md
+│   └── outlines/             # 故事大纲示例
+│       └── outline_01_time_traveler.md
 │
 ├── prompts/                  # Prompt模板
 │   ├── scene1_extraction.txt      # 标准剧本转换prompt
@@ -94,7 +102,8 @@ Script-JSON-Conversion-Evaluation-System/
 │
 ├── docs/                     # 其他文档
 │   ├── project_structure.md
-│   └── script_eval_development_checklist.md
+│   ├── script_eval_development_checklist.md
+│   └── OPTIMIZATION_SUMMARY_2025-11-01.md  # 大文件优化总结
 │
 ├── tests/                    # 测试文件
 │   ├── unit/
@@ -149,10 +158,10 @@ python scripts/test_system.py
 
 ```bash
 # 转换标准剧本
-python scripts/convert_script_to_json.py script_examples/测试1.md
+python scripts/convert_script_to_json.py script_examples/scripts/script_01_wuxia_tech.md
 
 # 转换故事大纲
-python scripts/convert_outline_to_json.py script_examples/故事大纲示例.md
+python scripts/convert_outline_to_json.py script_examples/outlines/outline_01_time_traveler.md
 
 # 输出位置：outputs/converted/
 ```
@@ -161,10 +170,10 @@ python scripts/convert_outline_to_json.py script_examples/故事大纲示例.md
 
 ```bash
 # 标准剧本：转换+评估（默认启用LLM语义评估）
-python scripts/run_full_evaluation.py script_examples/测试1.md
+python scripts/run_full_evaluation.py script_examples/scripts/script_01_wuxia_tech.md
 
 # 故事大纲：转换+评估
-python scripts/run_outline_evaluation.py script_examples/故事大纲示例.md
+python scripts/run_outline_evaluation.py script_examples/outlines/outline_01_time_traveler.md
 
 # 输出位置：
 # - JSON: outputs/converted/
@@ -175,14 +184,14 @@ python scripts/run_outline_evaluation.py script_examples/故事大纲示例.md
 
 ```bash
 # 不使用LLM语义评估（更快、更便宜）
-python scripts/run_full_evaluation.py script_examples/测试1.md --no-llm-judge
+python scripts/run_full_evaluation.py script_examples/scripts/script_01_wuxia_tech.md --no-llm-judge
 ```
 
 #### 场景D：批量处理
 
 ```bash
 # 批量转换所有剧本
-for file in script_examples/测试*.md; do
+for file in script_examples/scripts/*.md; do
     python scripts/run_full_evaluation.py "$file"
 done
 ```
@@ -195,7 +204,7 @@ from scripts.convert_script_to_json import convert_script_to_json
 from utils.file_handler import FileHandler
 
 file_handler = FileHandler()
-script_text = file_handler.read_text_file("script_examples/测试1.md")
+script_text = file_handler.read_text_file("script_examples/scripts/script_01_wuxia_tech.md")
 json_data = convert_script_to_json(script_text, scene_type="standard")
 
 # 方式2：使用评估器API
@@ -212,7 +221,7 @@ result = evaluator.evaluate_script(
     source_text=script_text,
     extracted_json=json_data,
     scene_type="standard",  # 或 "outline"
-    source_file="测试1.md"
+    source_file="script_01_wuxia_tech.md"
 )
 
 print(f"总分: {result.overall_score:.3f}")
@@ -227,7 +236,7 @@ print(f"通过: {'✅' if result.passed else '❌'}")
 #### 输入：剧本文本文件
 
 ```markdown
-# 文件: script_examples/测试1.md
+# 文件: script_examples/scripts/script_01_wuxia_tech.md
 
 内景 咖啡馆 - 日
 
@@ -252,7 +261,7 @@ print(f"通过: {'✅' if result.passed else '❌'}")
 #### 执行：运行评估脚本
 
 ```bash
-python scripts/run_full_evaluation.py script_examples/测试1.md
+python scripts/run_full_evaluation.py script_examples/scripts/script_01_wuxia_tech.md
 ```
 
 #### 输出：评估结果
@@ -262,7 +271,7 @@ python scripts/run_full_evaluation.py script_examples/测试1.md
 剧本JSON转换评估系统 - 完整评估流程
 ======================================================================
 
-[步骤 1/3] 读取剧本文件: script_examples/测试1.md
+[步骤 1/3] 读取剧本文件: script_examples/scripts/script_01_wuxia_tech.md
   文件大小: 234 字符
 
 [步骤 2/3] 使用DeepSeek API转换剧本为JSON...
@@ -281,7 +290,7 @@ python scripts/run_full_evaluation.py script_examples/测试1.md
 评估结果
 ======================================================================
 
-文件: script_examples/测试1.md
+文件: script_examples/scripts/script_01_wuxia_tech.md
 质量级别: 优秀
 总分: 0.865
 通过: ✅ 是
@@ -306,16 +315,16 @@ python scripts/run_full_evaluation.py script_examples/测试1.md
 ```
 outputs/
 ├── converted/
-│   └── 测试1_output.json          # 转换后的JSON
+│   └── script_01_wuxia_tech_output.json  # 转换后的JSON
 └── reports/
-    └── report_2025-11-01T13:30:00.json  # 详细评估报告
+    └── report_2025-11-01T13:30:00.json   # 详细评估报告
 ```
 
 ## 🔧 核心模块说明
 
 ### 1. 核心脚本 (scripts/)
 
-**5个脚本，覆盖所有使用场景：**
+**7个脚本，覆盖所有使用场景：**
 
 | 脚本 | 功能 | 输入 | 输出 |
 |------|------|------|------|
@@ -324,6 +333,8 @@ outputs/
 | `convert_outline_to_json.py` | 故事大纲转换 | 大纲.md | JSON |
 | `run_full_evaluation.py` | 标准剧本完整评估 | 剧本.md | JSON + 报告 |
 | `run_outline_evaluation.py` | 故事大纲完整评估 | 大纲.md | JSON + 报告 |
+| `batch_test_all_scripts.py` | 批量测试所有剧本 | script_examples/scripts/ | 批量结果报告 |
+| `test_single_large_file.py` | 单文件测试工具 | 大文件路径 | 测试结果 |
 
 详见：[ref/scripts-guide.md](ref/scripts-guide.md)
 
@@ -450,6 +461,7 @@ python scripts/test_system.py
 ### 其他文档
 - 📂 [项目结构说明](docs/project_structure.md)
 - ✅ [开发任务清单](docs/script_eval_development_checklist.md)
+- ⚡ [大文件优化总结](docs/OPTIMIZATION_SUMMARY_2025-11-01.md) - DeepSeek Reasoner模型集成与后处理优化
 
 ## 技术栈
 
@@ -463,6 +475,19 @@ python scripts/test_system.py
 
 ## 🗺️ 路线图
 
+### ✅ 已完成（v0.2.1 - 2025-11-01）
+- [x] **大文件优化**：智能模型选择系统
+  - 自动根据文件大小（12K阈值）选择最佳模型
+  - 小文件使用deepseek-chat（8K输出，快速）
+  - 大文件使用deepseek-reasoner（32K输出，支持复杂推理）
+- [x] **后处理增强**：思考过程提取和JSON修复
+  - 允许reasoner模型自由思考（提高输出质量）
+  - 自动清理`<think>`标签，精确提取JSON
+  - 智能修复常见JSON错误（缺失括号、尾部逗号）
+- [x] 批量测试脚本（batch_test_all_scripts.py）
+- [x] 单文件测试工具（test_single_large_file.py）
+- [x] 详细优化文档（docs/OPTIMIZATION_SUMMARY_2025-11-01.md）
+
 ### ✅ 已完成（v0.2.0）
 - [x] Pydantic V2完整迁移
 - [x] 标准剧本和故事大纲双场景支持
@@ -471,7 +496,6 @@ python scripts/test_system.py
 - [x] DeepSeek API集成
 - [x] 输出目录重构（outputs/converted/ + outputs/reports/）
 - [x] 完整参考文档系统（890行）
-- [x] 批量处理支持
 
 ### 🚧 进行中（v0.3.0）
 - [ ] 完整的单元测试覆盖（>80%）

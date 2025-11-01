@@ -41,15 +41,32 @@ logger = get_logger(__name__)
 
 @dataclass
 class DeepSeekConfig:
-    """DeepSeek API配置"""
+    """DeepSeek API配置 (基于 DeepSeek-V3.2-Exp)
+
+    模型选择：
+    - deepseek-chat: 通用对话模型，max_output=8K，支持Function Calling
+    - deepseek-reasoner: 推理模型（思考模式），max_output=64K，适合大文件处理
+    - deepseek-coder: 代码专用模型
+    """
 
     api_key: str
     base_url: str = "https://api.deepseek.com/v1"
-    model: str = "deepseek-chat"  # 或 deepseek-coder
+    model: str = "deepseek-chat"  # deepseek-chat | deepseek-reasoner | deepseek-coder
     temperature: float = 0.1  # 评估用低温度
-    max_tokens: int = 4096
+    max_tokens: int = 8192  # chat模型最大8K，reasoner模型最大64K
     max_retries: int = 3
     retry_delay: int = 2  # 秒
+
+    def __post_init__(self):
+        """根据模型自动调整max_tokens"""
+        if self.model == "deepseek-reasoner":
+            # reasoner模型支持更大的输出（最大64K）
+            if self.max_tokens < 32768:
+                self.max_tokens = 32768  # 使用默认的32K
+        elif self.model == "deepseek-chat":
+            # chat模型最大8K
+            if self.max_tokens > 8192:
+                self.max_tokens = 8192
 
 
 class DeepSeekClient:

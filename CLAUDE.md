@@ -109,19 +109,19 @@ python scripts/test_system.py
 
 ```bash
 # Convert script to JSON only
-python scripts/convert_script_to_json.py script_examples/测试1.md
+python scripts/convert_script_to_json.py script_examples/scripts/script_01_wuxia_tech.md
 
 # Convert outline to JSON only
-python scripts/convert_outline_to_json.py 故事大纲示例.md
+python scripts/convert_outline_to_json.py script_examples/outlines/outline_01_time_traveler.md
 
 # Full script evaluation (with LLM semantic evaluation)
-python scripts/run_full_evaluation.py script_examples/测试1.md
+python scripts/run_full_evaluation.py script_examples/scripts/script_01_wuxia_tech.md
 
 # Full outline evaluation
-python scripts/run_outline_evaluation.py 故事大纲示例.md
+python scripts/run_outline_evaluation.py script_examples/outlines/outline_01_time_traveler.md
 
 # Skip LLM evaluation (faster, cheaper)
-python scripts/run_full_evaluation.py script_examples/测试1.md --no-llm-judge
+python scripts/run_full_evaluation.py script_examples/scripts/script_01_wuxia_tech.md --no-llm-judge
 ```
 
 See **[ref/scripts-guide.md](ref/scripts-guide.md)** for complete script documentation.
