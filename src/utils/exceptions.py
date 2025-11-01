@@ -80,7 +80,10 @@ class JSONValidationError(ValidationError):
     """JSON格式验证失败"""
 
     def __init__(
-        self, message: str = "JSON数据验证失败", validation_errors: list = None, details: dict = None
+        self,
+        message: str = "JSON数据验证失败",
+        validation_errors: list = None,
+        details: dict = None,
     ):
         self.validation_errors = validation_errors or []
         super().__init__(message, details)
@@ -108,7 +111,9 @@ class SceneValidationError(ValidationError):
 class CharacterValidationError(ValidationError):
     """角色数据验证失败"""
 
-    def __init__(self, character: str = None, message: str = "角色数据验证失败", details: dict = None):
+    def __init__(
+        self, character: str = None, message: str = "角色数据验证失败", details: dict = None
+    ):
         details = details or {}
         if character:
             details["character"] = character

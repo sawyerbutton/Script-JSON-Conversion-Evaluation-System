@@ -4,13 +4,12 @@
 
 import logging
 import time
-from pathlib import Path
 
 import pytest
 
 from src.utils.logger import (
-    ColoredFormatter,
     LOG_LEVELS,
+    ColoredFormatter,
     LoggerContext,
     OperationLogger,
     create_session_logger,
@@ -339,7 +338,6 @@ class TestApplicationLogging:
     def test_setup_application_logging_clears_handlers(self):
         """测试清除已有handlers"""
         root_logger = logging.getLogger()
-        initial_count = len(root_logger.handlers)
 
         setup_application_logging(level="INFO", log_to_file=False)
         # 配置后应该清除旧的handlers并添加新的
@@ -393,7 +391,7 @@ class TestIntegration:
         def test_func(x):
             return x * 2
 
-        result = test_func(5)
+        test_func(5)
 
         # 5. 验证文件内容
         log_file = tmp_path / "integration.log"

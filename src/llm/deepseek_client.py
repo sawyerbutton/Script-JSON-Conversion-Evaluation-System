@@ -18,10 +18,8 @@ try:
     # 尝试相对导入
     from ..utils.exceptions import (
         APIConnectionError,
-        APIQuotaExceededError,
         APIRateLimitError,
         APIResponseError,
-        APITimeoutError,
     )
     from ..utils.logger import get_logger
     from ..utils.performance import APICallTracker, timer
@@ -29,10 +27,8 @@ except ImportError:
     # 从scripts运行时直接导入（src已在sys.path中）
     from utils.exceptions import (
         APIConnectionError,
-        APIQuotaExceededError,
         APIRateLimitError,
         APIResponseError,
-        APITimeoutError,
     )
     from utils.logger import get_logger
     from utils.performance import APICallTracker, timer

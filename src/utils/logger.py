@@ -178,9 +178,7 @@ class OperationLogger:
         elapsed = (datetime.now() - self.start_time).total_seconds()
 
         if exc_val is not None:
-            self.logger.error(
-                f"{self.operation}失败 (耗时: {elapsed:.2f}秒): {exc_val}"
-            )
+            self.logger.error(f"{self.operation}失败 (耗时: {elapsed:.2f}秒): {exc_val}")
         else:
             self.logger.info(f"{self.operation}完成 (耗时: {elapsed:.2f}秒)")
 
@@ -257,9 +255,7 @@ def create_session_logger(session_id: str = None) -> logging.Logger:
 # ============================================================================
 
 
-def setup_application_logging(
-    level: str = "INFO", log_to_file: bool = True, log_dir: str = "logs"
-):
+def setup_application_logging(level: str = "INFO", log_to_file: bool = True, log_dir: str = "logs"):
     """
     设置应用程序级别的日志配置
 

@@ -3,8 +3,7 @@
 使用mock避免实际API调用
 """
 
-import json
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -109,7 +108,7 @@ class TestDeepSeekClient:
         mock_openai_client.chat.completions.create.return_value = mock_response
 
         client = DeepSeekClient(mock_config)
-        result = client.complete(prompt="用户提示", system_prompt="系统提示")
+        client.complete(prompt="用户提示", system_prompt="系统提示")
 
         # 验证消息格式
         call_kwargs = mock_openai_client.chat.completions.create.call_args[1]
@@ -130,9 +129,7 @@ class TestDeepSeekClient:
         mock_openai_client.chat.completions.create.return_value = mock_response
 
         client = DeepSeekClient(mock_config)
-        result = client.complete(
-            prompt="测试", response_format={"type": "json_object"}
-        )
+        result = client.complete(prompt="测试", response_format={"type": "json_object"})
 
         # 验证JSON被正确解析
         assert isinstance(result["content"], dict)
@@ -146,9 +143,7 @@ class TestDeepSeekClient:
     def test_complete_with_invalid_json(self, mock_config, mock_openai_client):
         """测试无效JSON响应的处理"""
         mock_response = Mock()
-        mock_response.choices = [
-            Mock(message=Mock(content="这不是JSON"), finish_reason="stop")
-        ]
+        mock_response.choices = [Mock(message=Mock(content="这不是JSON"), finish_reason="stop")]
         mock_response.usage = Mock(total_tokens=50)
         mock_response.model = "deepseek-chat"
 
@@ -188,9 +183,7 @@ class TestDeepSeekClient:
         mock_response.model = "deepseek-chat"
 
         mock_openai_client.chat.completions.create.side_effect = [
-            openai.RateLimitError(
-                "Rate limit exceeded", response=Mock(), body=None
-            ),
+            openai.RateLimitError("Rate limit exceeded", response=Mock(), body=None),
             mock_response,
         ]
 
@@ -283,6 +276,7 @@ class TestDeepSeekClient:
         api_error = openai.APIError("Error", request=Mock(), body=None)
 
         call_count = [0]
+
         def side_effect(*args, **kwargs):
             call_count[0] += 1
             if call_count[0] == 1:

@@ -129,7 +129,9 @@ class ScriptEvaluator:
             logger.debug(f"输出目录已准备: {self.config.output_dir}")
         except Exception as e:
             logger.error(f"创建输出目录失败: {e}")
-            raise FileWriteError(f"无法创建输出目录: {self.config.output_dir}", details={"error": str(e)})
+            raise FileWriteError(
+                f"无法创建输出目录: {self.config.output_dir}", details={"error": str(e)}
+            )
 
     @timer(name="剧本评估", log_result=True)
     def evaluate_script(
@@ -162,7 +164,9 @@ class ScriptEvaluator:
             # 1. 结构验证
             profiler.checkpoint("结构验证")
             with track_performance("结构验证", source_file=source_file):
-                structure_score, structure_issues = self._evaluate_structure(extracted_json, scene_type)
+                structure_score, structure_issues = self._evaluate_structure(
+                    extracted_json, scene_type
+                )
 
             # 2. 场景边界评估
             profiler.checkpoint("场景边界评估")
@@ -172,7 +176,9 @@ class ScriptEvaluator:
             # 3. 角色提取评估
             profiler.checkpoint("角色提取评估")
             with track_performance("角色提取评估", source_file=source_file):
-                character_score, char_details = self._evaluate_characters(source_text, extracted_json)
+                character_score, char_details = self._evaluate_characters(
+                    source_text, extracted_json
+                )
 
             # 4. 语义一致性评估
             profiler.checkpoint("语义评估")
@@ -503,7 +509,9 @@ class ScriptEvaluator:
                 self._save_html_report(result)
         except IOError as e:
             logger.error(f"保存报告失败: {e}")
-            raise FileWriteError(f"无法保存评估报告到 {self.config.output_dir}", details={"error": str(e)})
+            raise FileWriteError(
+                f"无法保存评估报告到 {self.config.output_dir}", details={"error": str(e)}
+            )
         except Exception as e:
             logger.error(f"保存报告时出现未预期错误: {e}")
             raise FileWriteError("保存报告失败", details={"error": str(e)})
@@ -581,7 +589,7 @@ class ScriptEvaluator:
             logger.info(f"HTML报告已保存: {html_path}")
         except IOError as e:
             logger.error(f"保存HTML报告失败: {e}")
-            raise FileWriteError(f"无法保存HTML报告", details={"error": str(e)})
+            raise FileWriteError("无法保存HTML报告", details={"error": str(e)})
 
 
 def batch_evaluate(evaluator: ScriptEvaluator, test_cases: List[Dict[str, Any]]) -> pd.DataFrame:
@@ -636,7 +644,7 @@ def batch_evaluate(evaluator: ScriptEvaluator, test_cases: List[Dict[str, Any]])
         logger.info(f"最低分: {df['overall_score'].min():.3f}")
 
         if failed_cases:
-            logger.warning(f"\n失败的案例:")
+            logger.warning("\n失败的案例:")
             for fc in failed_cases:
                 logger.warning(f"  - {fc['case']}: {fc['error']}")
 

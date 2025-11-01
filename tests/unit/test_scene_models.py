@@ -74,13 +74,17 @@ class TestRelationChange:
             RelationChange(chars=["李雷"], **{"from": "单身", "to": "恋爱"})
         # Pydantic会先检查min_length，然后才执行自定义验证
         error_msg = str(exc_info.value)
-        assert "chars" in error_msg and ("at least 2" in error_msg or "关系变化必须涉及恰好两个角色" in error_msg)
+        assert "chars" in error_msg and (
+            "at least 2" in error_msg or "关系变化必须涉及恰好两个角色" in error_msg
+        )
 
         # 三个角色（Pydantic max_length先触发）
         with pytest.raises(ValidationError) as exc_info:
             RelationChange(chars=["李雷", "韩梅梅", "王芳"], **{"from": "朋友", "to": "敌人"})
         error_msg = str(exc_info.value)
-        assert "chars" in error_msg and ("at most 2" in error_msg or "关系变化必须涉及恰好两个角色" in error_msg)
+        assert "chars" in error_msg and (
+            "at most 2" in error_msg or "关系变化必须涉及恰好两个角色" in error_msg
+        )
 
     def test_same_character_fails(self):
         """测试相同角色应该失败"""
@@ -258,7 +262,9 @@ class TestSceneInfo:
             )
         error_msg = str(exc_info.value)
         # Pydantic V2使用min_items约束，会显示"at least 1 item"
-        assert "key_events" in error_msg and ("at least 1" in error_msg or "至少需要一个关键事件" in error_msg)
+        assert "key_events" in error_msg and (
+            "at least 1" in error_msg or "至少需要一个关键事件" in error_msg
+        )
 
         # 超过3个应该失败（Pydantic max_items先触发）
         with pytest.raises(ValidationError) as exc_info:
@@ -270,7 +276,9 @@ class TestSceneInfo:
                 key_events=["事件1", "事件2", "事件3", "事件4"],
             )
         error_msg = str(exc_info.value)
-        assert "key_events" in error_msg and ("at most 3" in error_msg or "关键事件不应超过3个" in error_msg)
+        assert "key_events" in error_msg and (
+            "at most 3" in error_msg or "关键事件不应超过3个" in error_msg
+        )
 
     def test_character_validation(self):
         """测试角色验证"""
@@ -328,15 +336,11 @@ class TestOutlineSceneInfo:
     def test_flexible_scene_id_format(self):
         """测试大纲允许更灵活的场景ID格式"""
         # S0, S1, S2 等简化格式
-        scene1 = OutlineSceneInfo(
-            scene_id="S0", scene_mission="开场", key_events=["事件1"]
-        )
+        scene1 = OutlineSceneInfo(scene_id="S0", scene_mission="开场", key_events=["事件1"])
         assert scene1.scene_id == "S0"
 
         # S01, S02 等标准格式
-        scene2 = OutlineSceneInfo(
-            scene_id="S01", scene_mission="开场", key_events=["事件1"]
-        )
+        scene2 = OutlineSceneInfo(scene_id="S01", scene_mission="开场", key_events=["事件1"])
         assert scene2.scene_id == "S01"
 
     def test_flexible_setting_validation(self):
@@ -379,7 +383,9 @@ class TestOutlineSceneInfo:
         with pytest.raises(ValidationError) as exc_info:
             OutlineSceneInfo(scene_id="S1", scene_mission="测试", key_events=[])
         error_msg = str(exc_info.value)
-        assert "key_events" in error_msg and ("at least 1" in error_msg or "至少需要一个关键事件" in error_msg)
+        assert "key_events" in error_msg and (
+            "at least 1" in error_msg or "至少需要一个关键事件" in error_msg
+        )
 
     def test_empty_characters_allowed(self):
         """测试大纲允许空角色列表"""

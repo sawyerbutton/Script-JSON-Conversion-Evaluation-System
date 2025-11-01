@@ -9,14 +9,16 @@ from collections import defaultdict
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List
 
 try:
     from .logger import get_logger
+
     logger = get_logger(__name__)
 except ImportError:
     # 允许独立运行
     import logging
+
     logger = logging.getLogger(__name__)
     logging.basicConfig(level=logging.INFO)
 
@@ -86,9 +88,7 @@ class PerformanceMonitor:
 
         # 记录慢操作（超过1秒）
         if metric.duration > 1.0:
-            logger.warning(
-                f"慢操作检测: {metric.operation} 耗时 {metric.duration:.2f}秒"
-            )
+            logger.warning(f"慢操作检测: {metric.operation} 耗时 {metric.duration:.2f}秒")
 
     def get_stats(self, operation: str = None) -> Dict[str, Any]:
         """获取性能统计"""
@@ -156,8 +156,10 @@ def track_performance(operation: str, **metadata):
     memory_after = 0
 
     try:
-        import psutil
         import os
+
+        import psutil
+
         process = psutil.Process(os.getpid())
         memory_before = process.memory_info().rss
     except ImportError:
@@ -179,8 +181,10 @@ def track_performance(operation: str, **metadata):
     finally:
         # 尝试获取结束时的内存
         try:
-            import psutil
             import os
+
+            import psutil
+
             process = psutil.Process(os.getpid())
             memory_after = process.memory_info().rss
         except ImportError:
@@ -219,9 +223,7 @@ def timer(func: Callable = None, *, name: str = None, log_result: bool = True):
                 result = f(*args, **kwargs)
 
                 if log_result:
-                    logger.info(
-                        f"{operation_name} 完成，耗时: {metric.duration:.3f}秒"
-                    )
+                    logger.info(f"{operation_name} 完成，耗时: {metric.duration:.3f}秒")
 
                 return result
 
@@ -401,9 +403,7 @@ class APICallTracker:
             "failed_calls": len(failed_calls),
             "total_tokens": self.total_tokens,
             "total_cost": round(self.total_cost, 4),
-            "average_duration": round(
-                sum(c["duration"] for c in self.calls) / len(self.calls), 3
-            ),
+            "average_duration": round(sum(c["duration"] for c in self.calls) / len(self.calls), 3),
         }
 
     def print_summary(self):
@@ -474,8 +474,6 @@ if __name__ == "__main__":
     # 测试计时装饰器
     @timer(name="示例函数")
     def example_function():
-        import time
-
         time.sleep(0.1)
         return "完成"
 
@@ -483,8 +481,6 @@ if __name__ == "__main__":
 
     # 测试性能跟踪上下文
     with track_performance("数据处理", batch_size=100):
-        import time
-
         time.sleep(0.05)
 
     # 测试性能分析器

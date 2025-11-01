@@ -4,45 +4,37 @@
 
 import pytest
 
-from src.utils.exceptions import (
-    # 基础异常
-    ScriptEvaluationError,
-    # API异常
-    APIError,
+from src.utils.exceptions import (  # 基础异常; API异常; 验证异常; 文件异常; 评估异常; 转换异常; 配置异常; 辅助函数
     APIConnectionError,
-    APIRateLimitError,
-    APITimeoutError,
-    APIResponseError,
+    APIError,
     APIQuotaExceededError,
-    # 验证异常
-    ValidationError,
-    JSONValidationError,
-    SceneValidationError,
+    APIRateLimitError,
+    APIResponseError,
+    APITimeoutError,
     CharacterValidationError,
-    # 文件异常
+    ConfigurationError,
+    ConversionError,
+    ErrorContext,
+    EvaluationConfigError,
+    EvaluationError,
     FileError,
+    FileFormatError,
     FileNotFoundError,
     FileReadError,
     FileWriteError,
-    FileFormatError,
-    # 评估异常
-    EvaluationError,
-    MetricCalculationError,
-    EvaluationConfigError,
     InsufficientDataError,
-    # 转换异常
-    ConversionError,
-    ScriptParsingError,
-    JSONGenerationError,
-    # 配置异常
-    ConfigurationError,
-    MissingConfigError,
     InvalidConfigError,
-    # 辅助函数
-    is_retryable_error,
-    get_error_severity,
+    JSONGenerationError,
+    JSONValidationError,
+    MetricCalculationError,
+    MissingConfigError,
+    SceneValidationError,
+    ScriptEvaluationError,
+    ScriptParsingError,
+    ValidationError,
     format_exception,
-    ErrorContext,
+    get_error_severity,
+    is_retryable_error,
 )
 
 
@@ -138,9 +130,7 @@ class TestValidationExceptions:
 
     def test_character_validation_error(self):
         """测试角色验证错误"""
-        error = CharacterValidationError(
-            "角色列表为空", details={"scene": "S01", "characters": []}
-        )
+        error = CharacterValidationError("角色列表为空", details={"scene": "S01", "characters": []})
         assert isinstance(error, ValidationError)
         assert error.details["characters"] == []
 
@@ -204,9 +194,7 @@ class TestEvaluationExceptions:
 
     def test_insufficient_data_error(self):
         """测试数据不足错误"""
-        error = InsufficientDataError(
-            "数据不足以进行评估", details={"required": 10, "actual": 3}
-        )
+        error = InsufficientDataError("数据不足以进行评估", details={"required": 10, "actual": 3})
         assert isinstance(error, EvaluationError)
         assert error.details["required"] == 10
         assert error.details["actual"] == 3
