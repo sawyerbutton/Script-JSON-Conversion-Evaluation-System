@@ -4,31 +4,27 @@
 """
 
 import json
-import os
-from typing import Dict, List, Any, Optional
-from pathlib import Path
-import pandas as pd
+import logging
+from dataclasses import asdict, dataclass
 from datetime import datetime
-from dataclasses import dataclass, asdict
-import asyncio
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+import pandas as pd
+from deepeval.test_case import LLMTestCase
 
 # 导入自定义模块
-from deepseek_client import DeepSeekClient, DeepSeekConfig
-from scene_models import validate_script_json, SceneInfo, OutlineSceneInfo
-from deepeval_metrics import (
-    SceneBoundaryMetric,
+from metrics.deepeval_metrics import (
     CharacterExtractionMetric,
-    SelfConsistencyMetric
+    SceneBoundaryMetric,
+    SelfConsistencyMetric,
 )
-
-from deepeval import evaluate
-from deepeval.test_case import LLMTestCase
-import logging
+from llm.deepseek_client import DeepSeekClient
+from models.scene_models import validate_script_json
 
 # 配置日志
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -36,22 +32,23 @@ logger = logging.getLogger(__name__)
 @dataclass
 class EvaluationConfig:
     """评估配置"""
+
     use_deepseek_judge: bool = True
     run_consistency_check: bool = True
     consistency_runs: int = 5
-    
+
     # 权重配置
     structure_weight: float = 0.25
     boundary_weight: float = 0.25
     character_weight: float = 0.25
     semantic_weight: float = 0.25
-    
+
     # 阈值配置
     pass_threshold: float = 0.70
     excellent_threshold: float = 0.85
-    
+
     # 输出配置
-    output_dir: str = "evaluation_results"
+    output_dir: str = "outputs/reports"
     save_detailed_report: bool = True
     save_html_report: bool = True
 
@@ -59,10 +56,11 @@ class EvaluationConfig:
 @dataclass
 class EvaluationResult:
     """评估结果"""
+
     timestamp: str
     source_file: str
     scene_type: str  # "standard" or "outline"
-    
+
     # 分数
     overall_score: float
     structure_score: float
@@ -70,13 +68,13 @@ class EvaluationResult:
     character_score: float
     semantic_score: float
     consistency_score: Optional[float]
-    
+
     # 详细信息
     total_scenes: int
     total_characters: int
     issues: List[Dict[str, Any]]
     recommendations: List[str]
-    
+
     # 评估状态
     passed: bool
     quality_level: str  # "优秀", "良好", "合格", "不合格"
@@ -84,60 +82,56 @@ class EvaluationResult:
 
 class ScriptEvaluator:
     """剧本评估器主类"""
-    
+
     def __init__(self, config: Optional[EvaluationConfig] = None):
         self.config = config or EvaluationConfig()
         self.deepseek_client = None
-        
+
         if self.config.use_deepseek_judge:
             self.deepseek_client = DeepSeekClient()
-        
+
         # 创建输出目录
         Path(self.config.output_dir).mkdir(parents=True, exist_ok=True)
-        
+
     def evaluate_script(
         self,
         source_text: str,
         extracted_json: Dict[str, Any],
         scene_type: str = "standard",
-        source_file: str = "unknown"
+        source_file: str = "unknown",
     ) -> EvaluationResult:
         """
         评估单个剧本转换结果
-        
+
         Args:
             source_text: 原始剧本文本
             extracted_json: 提取的JSON数据
             scene_type: "standard" (场景1) 或 "outline" (场景2)
             source_file: 源文件名
-            
+
         Returns:
             评估结果对象
         """
-        
+
         logger.info(f"开始评估: {source_file} (类型: {scene_type})")
-        
+
         # 1. 结构验证
-        structure_score, structure_issues = self._evaluate_structure(
-            extracted_json, scene_type
-        )
-        
+        structure_score, structure_issues = self._evaluate_structure(extracted_json, scene_type)
+
         # 2. 场景边界评估
         boundary_score = self._evaluate_boundaries(source_text, extracted_json)
-        
+
         # 3. 角色提取评估
-        character_score, char_details = self._evaluate_characters(
-            source_text, extracted_json
-        )
-        
+        character_score, char_details = self._evaluate_characters(source_text, extracted_json)
+
         # 4. 语义一致性评估
         semantic_score = self._evaluate_semantics(source_text, extracted_json)
-        
+
         # 5. 自一致性评估（可选）
         consistency_score = None
         if self.config.run_consistency_check:
             consistency_score = self._evaluate_consistency(source_text, extracted_json)
-        
+
         # 计算总分
         scores = {
             "structure": (structure_score, self.config.structure_weight),
@@ -145,11 +139,11 @@ class ScriptEvaluator:
             "character": (character_score, self.config.character_weight),
             "semantic": (semantic_score, self.config.semantic_weight),
         }
-        
-        overall_score = sum(
-            score * weight for score, weight in scores.values()
-        ) / sum(weight for _, weight in scores.values())
-        
+
+        overall_score = sum(score * weight for score, weight in scores.values()) / sum(
+            weight for _, weight in scores.values()
+        )
+
         # 确定质量级别
         if overall_score >= self.config.excellent_threshold:
             quality_level = "优秀"
@@ -159,19 +153,17 @@ class ScriptEvaluator:
             quality_level = "合格"
         else:
             quality_level = "不合格"
-        
+
         # 收集问题和建议
         issues = structure_issues
-        recommendations = self._generate_recommendations(
-            scores, issues, char_details
-        )
-        
+        recommendations = self._generate_recommendations(scores, issues, char_details)
+
         # 统计信息
         scenes = extracted_json if isinstance(extracted_json, list) else [extracted_json]
         all_characters = set()
         for scene in scenes:
             all_characters.update(scene.get("characters", []))
-        
+
         # 创建结果对象
         result = EvaluationResult(
             timestamp=datetime.now().isoformat(),
@@ -188,147 +180,117 @@ class ScriptEvaluator:
             issues=issues,
             recommendations=recommendations,
             passed=overall_score >= self.config.pass_threshold,
-            quality_level=quality_level
+            quality_level=quality_level,
         )
-        
+
         # 保存结果
         if self.config.save_detailed_report:
             self._save_report(result)
-        
+
         logger.info(f"评估完成: {quality_level} (总分: {overall_score:.3f})")
-        
+
         return result
-    
-    def _evaluate_structure(
-        self,
-        json_data: Any,
-        scene_type: str
-    ) -> tuple[float, List[Dict]]:
+
+    def _evaluate_structure(self, json_data: Any, scene_type: str) -> tuple[float, List[Dict]]:
         """评估JSON结构"""
-        
+
         issues = []
-        
+
         # 使用Pydantic验证
         validation_result = validate_script_json(json_data, scene_type)
-        
+
         if validation_result["valid"]:
             base_score = 1.0
         else:
             base_score = 0.3
             for error in validation_result["errors"]:
-                issues.append({
-                    "type": "structure",
-                    "severity": "high",
-                    "message": error
-                })
-        
+                issues.append({"type": "structure", "severity": "high", "message": error})
+
         # 检查数据完整性
         scenes = json_data if isinstance(json_data, list) else [json_data]
-        
+
         completeness_scores = []
         for i, scene in enumerate(scenes):
             scene_complete = self._check_scene_completeness(scene)
             completeness_scores.append(scene_complete)
-            
+
             if scene_complete < 0.8:
-                issues.append({
-                    "type": "completeness",
-                    "severity": "medium",
-                    "message": f"场景 {i+1} 信息不完整",
-                    "scene_id": scene.get("scene_id", f"Scene_{i+1}")
-                })
-        
-        avg_completeness = sum(completeness_scores) / len(completeness_scores) if completeness_scores else 0
-        
+                issues.append(
+                    {
+                        "type": "completeness",
+                        "severity": "medium",
+                        "message": f"场景 {i+1} 信息不完整",
+                        "scene_id": scene.get("scene_id", f"Scene_{i+1}"),
+                    }
+                )
+
+        avg_completeness = (
+            sum(completeness_scores) / len(completeness_scores) if completeness_scores else 0
+        )
+
         # 综合结构分数
         structure_score = 0.6 * base_score + 0.4 * avg_completeness
-        
+
         return structure_score, issues
-    
+
     def _check_scene_completeness(self, scene: Dict) -> float:
         """检查单个场景的完整性"""
-        
-        required_fields = [
-            "scene_id", "setting", "characters",
-            "scene_mission", "key_events"
-        ]
-        
-        optional_fields = [
-            "info_change", "relation_change",
-            "key_object", "setup_payoff"
-        ]
-        
+
+        required_fields = ["scene_id", "setting", "characters", "scene_mission", "key_events"]
+
+        optional_fields = ["info_change", "relation_change", "key_object", "setup_payoff"]
+
         # 必需字段得分
         required_score = sum(
-            1 for field in required_fields
-            if field in scene and scene[field]
+            1 for field in required_fields if field in scene and scene[field]
         ) / len(required_fields)
-        
+
         # 可选字段得分（权重较低）
-        optional_score = sum(
-            1 for field in optional_fields
-            if field in scene
-        ) / len(optional_fields)
-        
+        optional_score = sum(1 for field in optional_fields if field in scene) / len(
+            optional_fields
+        )
+
         return 0.7 * required_score + 0.3 * optional_score
-    
-    def _evaluate_boundaries(
-        self,
-        source_text: str,
-        json_data: Any
-    ) -> float:
+
+    def _evaluate_boundaries(self, source_text: str, json_data: Any) -> float:
         """评估场景边界"""
-        
+
         # 创建测试用例
         test_case = LLMTestCase(
-            input=source_text,
-            actual_output=json.dumps(json_data, ensure_ascii=False)
+            input=source_text, actual_output=json.dumps(json_data, ensure_ascii=False)
         )
-        
+
         # 创建指标
-        metric = SceneBoundaryMetric(
-            threshold=0.7,
-            use_deepseek=self.config.use_deepseek_judge
-        )
-        
+        metric = SceneBoundaryMetric(threshold=0.7, use_deepseek=self.config.use_deepseek_judge)
+
         # 评估
         score = metric.measure(test_case)
-        
+
         return score
-    
-    def _evaluate_characters(
-        self,
-        source_text: str,
-        json_data: Any
-    ) -> tuple[float, Dict]:
+
+    def _evaluate_characters(self, source_text: str, json_data: Any) -> tuple[float, Dict]:
         """评估角色提取"""
-        
+
         test_case = LLMTestCase(
-            input=source_text,
-            actual_output=json.dumps(json_data, ensure_ascii=False)
+            input=source_text, actual_output=json.dumps(json_data, ensure_ascii=False)
         )
-        
+
         metric = CharacterExtractionMetric(
-            threshold=0.7,
-            use_deepseek=self.config.use_deepseek_judge
+            threshold=0.7, use_deepseek=self.config.use_deepseek_judge
         )
-        
+
         score = metric.measure(test_case)
-        
+
         return score, metric.details
-    
-    def _evaluate_semantics(
-        self,
-        source_text: str,
-        json_data: Any
-    ) -> float:
+
+    def _evaluate_semantics(self, source_text: str, json_data: Any) -> float:
         """评估语义准确性"""
-        
+
         if not self.config.use_deepseek_judge:
             return 0.75  # 默认分数
-        
+
         scenes = json_data if isinstance(json_data, list) else [json_data]
-        
+
         # 构建评估提示
         prompt = f"""
 请评估JSON提取结果的语义准确性。
@@ -355,104 +317,101 @@ class ScriptEvaluator:
     "major_issues": ["问题1", "问题2"]
 }}
 """
-        
+
         try:
             response = self.deepseek_client.complete(
-                prompt=prompt,
-                temperature=0.0,
-                response_format={"type": "json_object"}
+                prompt=prompt, temperature=0.0, response_format={"type": "json_object"}
             )
-            
+
             result = response["content"]
             return result.get("score", 0.7)
         except Exception as e:
             logger.error(f"语义评估失败: {e}")
             return 0.7
-    
-    def _evaluate_consistency(
-        self,
-        source_text: str,
-        json_data: Any
-    ) -> float:
+
+    def _evaluate_consistency(self, source_text: str, json_data: Any) -> float:
         """评估自一致性（多次运行）"""
-        
+
         logger.info(f"运行{self.config.consistency_runs}次一致性测试...")
-        
+
         # 这里简化处理，实际应该多次调用提取接口
         # 假设我们已经有了多次运行的结果
         runs = [json_data] * self.config.consistency_runs  # 简化：使用相同结果
-        
+
         test_case = LLMTestCase(
-            input=source_text,
-            actual_output=json.dumps(runs, ensure_ascii=False)
+            input=source_text, actual_output=json.dumps(runs, ensure_ascii=False)
         )
-        
-        metric = SelfConsistencyMetric(
-            threshold=0.7,
-            num_runs=self.config.consistency_runs
-        )
-        
+
+        metric = SelfConsistencyMetric(threshold=0.7, num_runs=self.config.consistency_runs)
+
         score = metric.measure(test_case)
-        
+
         return score
-    
+
     def _generate_recommendations(
-        self,
-        scores: Dict,
-        issues: List[Dict],
-        char_details: Dict
+        self, scores: Dict, issues: List[Dict], char_details: Dict
     ) -> List[str]:
         """生成改进建议"""
-        
+
         recommendations = []
-        
+
         # 基于分数的建议
         score_items = [(name, score[0]) for name, score in scores.items()]
         worst_aspect = min(score_items, key=lambda x: x[1])
-        
+
         if worst_aspect[1] < 0.7:
             aspect_name_map = {
                 "structure": "JSON结构",
                 "boundary": "场景划分",
                 "character": "角色识别",
-                "semantic": "语义理解"
+                "semantic": "语义理解",
             }
             recommendations.append(
                 f"重点改进{aspect_name_map.get(worst_aspect[0], worst_aspect[0])}方面"
             )
-        
+
         # 基于具体问题的建议
         high_severity_issues = [i for i in issues if i.get("severity") == "high"]
         if high_severity_issues:
             recommendations.append("优先修复高严重性的结构问题")
-        
+
         # 角色相关建议
         if "mentioned_only" in char_details:
             recommendations.append("区分实际出场角色和仅被提及的角色")
-        
+
         # 通用建议
         if not recommendations:
             recommendations.append("继续保持当前提取质量")
-        
+
         return recommendations
-    
+
     def _save_report(self, result: EvaluationResult):
         """保存评估报告"""
-        
+
         # JSON格式
         report_path = Path(self.config.output_dir) / f"report_{result.timestamp}.json"
+
+        # 自定义序列化函数处理特殊类型
+        def default_handler(obj):
+            if hasattr(obj, '__dict__'):
+                return obj.__dict__
+            elif isinstance(obj, (set, frozenset)):
+                return list(obj)
+            else:
+                return str(obj)
+
         with open(report_path, "w", encoding="utf-8") as f:
-            json.dump(asdict(result), f, ensure_ascii=False, indent=2)
-        
+            json.dump(asdict(result), f, ensure_ascii=False, indent=2, default=default_handler)
+
         logger.info(f"报告已保存: {report_path}")
-        
+
         # HTML格式（如果启用）
         if self.config.save_html_report:
             self._save_html_report(result)
-    
+
     def _save_html_report(self, result: EvaluationResult):
         """保存HTML格式报告"""
-        
+
         html_content = f"""
 <!DOCTYPE html>
 <html lang="zh-CN">
@@ -514,41 +473,38 @@ class ScriptEvaluator:
 </body>
 </html>
 """
-        
+
         html_path = Path(self.config.output_dir) / f"report_{result.timestamp}.html"
         with open(html_path, "w", encoding="utf-8") as f:
             f.write(html_content)
-        
+
         logger.info(f"HTML报告已保存: {html_path}")
 
 
-def batch_evaluate(
-    evaluator: ScriptEvaluator,
-    test_cases: List[Dict[str, Any]]
-) -> pd.DataFrame:
+def batch_evaluate(evaluator: ScriptEvaluator, test_cases: List[Dict[str, Any]]) -> pd.DataFrame:
     """批量评估多个测试用例"""
-    
+
     results = []
-    
+
     for case in test_cases:
         try:
             result = evaluator.evaluate_script(
                 source_text=case["source_text"],
                 extracted_json=case["extracted_json"],
                 scene_type=case.get("scene_type", "standard"),
-                source_file=case.get("file_name", "unknown")
+                source_file=case.get("file_name", "unknown"),
             )
             results.append(asdict(result))
         except Exception as e:
             logger.error(f"评估失败 {case.get('file_name', 'unknown')}: {e}")
-    
+
     # 转换为DataFrame便于分析
     df = pd.DataFrame(results)
-    
+
     # 保存汇总报告
     summary_path = Path(evaluator.config.output_dir) / "batch_summary.csv"
     df.to_csv(summary_path, index=False, encoding="utf-8-sig")
-    
+
     # 打印统计信息
     print("\n=== 批量评估汇总 ===")
     print(f"总计评估: {len(results)} 个")
@@ -556,7 +512,7 @@ def batch_evaluate(
     print(f"平均总分: {df['overall_score'].mean():.3f}")
     print(f"最高分: {df['overall_score'].max():.3f}")
     print(f"最低分: {df['overall_score'].min():.3f}")
-    
+
     return df
 
 
@@ -567,11 +523,11 @@ if __name__ == "__main__":
         use_deepseek_judge=True,  # 使用DeepSeek进行语义评估
         run_consistency_check=False,  # 暂时关闭一致性检查
         save_detailed_report=True,
-        save_html_report=True
+        save_html_report=True,
     )
-    
+
     evaluator = ScriptEvaluator(config)
-    
+
     # 准备测试数据
     test_case = {
         "source_text": """内景 咖啡馆 - 日
@@ -600,62 +556,42 @@ if __name__ == "__main__":
 够了。我们结束了。
 
 她快步离开，留下李雷一个人呆坐在那里。""",
-        
         "extracted_json": [
             {
                 "scene_id": "S01",
                 "setting": "内景 咖啡馆 - 日",
                 "characters": ["李雷", "韩梅梅"],
                 "scene_mission": "展现两人关系的破裂",
-                "key_events": [
-                    "韩梅梅冷漠地到来",
-                    "李雷试图解释被拒绝",
-                    "韩梅梅宣布分手离开"
-                ],
-                "info_change": [
-                    {
-                        "character": "观众",
-                        "learned": "两人关系出现重大危机"
-                    }
-                ],
-                "relation_change": [
-                    {
-                        "chars": ["李雷", "韩梅梅"],
-                        "from": "恋人",
-                        "to": "分手"
-                    }
-                ],
+                "key_events": ["韩梅梅冷漠地到来", "李雷试图解释被拒绝", "韩梅梅宣布分手离开"],
+                "info_change": [{"character": "观众", "learned": "两人关系出现重大危机"}],
+                "relation_change": [{"chars": ["李雷", "韩梅梅"], "from": "恋人", "to": "分手"}],
                 "key_object": [],
-                "setup_payoff": {
-                    "setup_for": [],
-                    "payoff_from": []
-                }
+                "setup_payoff": {"setup_for": [], "payoff_from": []},
             }
         ],
-        
         "scene_type": "standard",
-        "file_name": "test_script_01.txt"
+        "file_name": "test_script_01.txt",
     }
-    
+
     # 运行评估
     result = evaluator.evaluate_script(**test_case)
-    
+
     # 打印结果
     print("\n=== 评估结果 ===")
     print(f"文件: {result.source_file}")
     print(f"质量级别: {result.quality_level}")
     print(f"总分: {result.overall_score:.3f}")
     print(f"通过: {'是' if result.passed else '否'}")
-    
+
     print("\n各项得分:")
     print(f"  结构验证: {result.structure_score:.3f}")
     print(f"  场景边界: {result.boundary_score:.3f}")
     print(f"  角色提取: {result.character_score:.3f}")
     print(f"  语义准确: {result.semantic_score:.3f}")
-    
+
     if result.issues:
         print(f"\n发现 {len(result.issues)} 个问题")
-    
+
     print("\n改进建议:")
     for i, rec in enumerate(result.recommendations, 1):
         print(f"  {i}. {rec}")
