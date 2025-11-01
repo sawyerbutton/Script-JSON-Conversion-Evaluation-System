@@ -72,6 +72,12 @@ This document provides pointers to important documentation and resources for AI-
    - Mock strategies for LLM clients
    - Coverage reports and analysis
 
+9. **[Bug Fixes Reference](ref/bug-fixes-reference.md)** ⭐ NEW (v0.2.1)
+   - Critical bug fixes from batch testing
+   - JSON serialization, performance timer, validation rules
+   - Character consistency improvements
+   - Verification and troubleshooting
+
 ### Detailed Documentation (docs/)
 
 - **[Project Structure](docs/project_structure.md)** - Detailed file organization
@@ -148,6 +154,7 @@ See **[ref/scripts-guide.md](ref/scripts-guide.md)** for complete script documen
 - **Writing tests**: [ref/testing-reference.md](ref/testing-reference.md)
 - **Adding features**: [ref/development.md](ref/development.md)
 - **API usage**: [ref/api-reference.md](ref/api-reference.md)
+- **Bug fixes and troubleshooting**: [ref/bug-fixes-reference.md](ref/bug-fixes-reference.md)
 
 ---
 
@@ -531,6 +538,7 @@ See **[ref/testing-reference.md](ref/testing-reference.md)** for comprehensive t
 - **Adding features**: [ref/development.md](ref/development.md)
 - **API usage**: [ref/api-reference.md](ref/api-reference.md)
 - **System architecture**: [ref/architecture.md](ref/architecture.md)
+- **Bug fixes and troubleshooting**: [ref/bug-fixes-reference.md](ref/bug-fixes-reference.md)
 
 ### Commands Reference
 
@@ -557,14 +565,22 @@ mypy src/            # Type check
 
 ## Recent Updates
 
-**Version 0.2.0** (2025-11-01):
-- ✅ Added comprehensive utility modules (exceptions, logger, performance)
-- ✅ Created 204 new unit tests (241 total)
-- ✅ Achieved 64% overall coverage (85% for core modules)
-- ✅ Added utils reference documentation
-- ✅ Added testing reference documentation
-- ✅ Improved error handling and logging throughout codebase
-- ✅ Added performance monitoring capabilities
+**Version 0.2.1** (2025-11-02): 🐛 Bug Fix Release
+- ✅ Fixed JSON serialization error in batch test reports
+- ✅ Fixed performance timer negative duration display
+- ✅ Implemented proper warning/error separation in validation
+- ✅ Added smart character validation (group characters, aliases)
+- ✅ Created bug fixes reference documentation
+- ✅ All 241 unit tests passing
+
+**Version 0.2.0** (2025-11-01): ⭐ Full Testing Release
+- ✅ Completed batch testing of 16 script files (100% success rate)
+- ✅ Smart model selection system (chat vs reasoner)
+- ✅ Large file processing (up to 41 scenes)
+- ✅ JSON post-processing and error recovery
+- ✅ Comprehensive utility modules (exceptions, logger, performance)
+- ✅ Created 241 unit tests with 64% coverage
+- ✅ Added utils and testing reference documentation
 
 **Version 0.1.0** (Initial):
 - Basic evaluation system
@@ -574,6 +590,6 @@ mypy src/            # Type check
 
 ---
 
-**Last Updated**: 2025-11-01
-**Version**: 0.2.0
+**Last Updated**: 2025-11-02
+**Version**: 0.2.1
 **Maintained by**: Development Team
