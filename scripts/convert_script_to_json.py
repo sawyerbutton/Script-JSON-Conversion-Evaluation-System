@@ -8,12 +8,12 @@ import json
 import sys
 from pathlib import Path
 
-# 添加src到路径
+# 添加src到路径  # noqa: E402
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from llm.deepseek_client import DeepSeekClient
-from models.scene_models import SceneInfo, validate_script_json
-from utils.file_handler import FileHandler
+from llm.deepseek_client import DeepSeekClient  # noqa: E402
+from models.scene_models import validate_script_json  # noqa: E402
+from utils.file_handler import FileHandler  # noqa: E402
 
 
 def load_prompt_template(template_name: str = "scene1_extraction.txt") -> str:
@@ -41,9 +41,7 @@ def convert_script_to_json(
     client = DeepSeekClient()
 
     # 加载prompt模板
-    template_name = (
-        "scene1_extraction.txt" if scene_type == "standard" else "scene2_extraction.txt"
-    )
+    template_name = "scene1_extraction.txt" if scene_type == "standard" else "scene2_extraction.txt"
     prompt_template = load_prompt_template(template_name)
 
     # 填充prompt
@@ -107,9 +105,7 @@ def main():
 
     parser = argparse.ArgumentParser(description="将剧本文本转换为JSON格式")
     parser.add_argument("input_file", help="输入剧本文件路径")
-    parser.add_argument(
-        "-o", "--output", help="输出JSON文件路径（可选，默认为input_file.json）"
-    )
+    parser.add_argument("-o", "--output", help="输出JSON文件路径（可选，默认为input_file.json）")
     parser.add_argument(
         "-t",
         "--type",
@@ -117,9 +113,7 @@ def main():
         default="standard",
         help="场景类型（默认: standard）",
     )
-    parser.add_argument(
-        "--no-validate", action="store_true", help="跳过JSON验证"
-    )
+    parser.add_argument("--no-validate", action="store_true", help="跳过JSON验证")
 
     args = parser.parse_args()
 
@@ -149,7 +143,7 @@ def main():
         print(f"\n✅ 转换完成！JSON已保存到: {output_file}")
 
         # 显示统计信息
-        print(f"\n统计信息:")
+        print("\n统计信息:")
         print(f"  场景数量: {len(json_data)}")
 
         all_characters = set()

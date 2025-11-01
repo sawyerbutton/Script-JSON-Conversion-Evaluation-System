@@ -193,7 +193,9 @@ class OutlineSceneInfo(BaseModel):
     setting: Optional[str] = Field(None, description="场景环境描述（可推断）")
     characters: List[str] = Field(default_factory=list, description="实际出场的角色列表")
     scene_mission: str = Field(..., description="场景的核心戏剧任务")
-    key_events: List[str] = Field(..., min_length=1, max_length=5, description="关键事件（大纲可多）")
+    key_events: List[str] = Field(
+        ..., min_length=1, max_length=5, description="关键事件（大纲可多）"
+    )
 
     # 可选字段
     info_change: List[InfoChange] = Field(default_factory=list, description="信息差变化")

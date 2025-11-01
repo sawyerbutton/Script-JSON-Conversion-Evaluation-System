@@ -13,13 +13,14 @@ from typing import Any, Dict, List, Optional
 import pandas as pd
 from deepeval.test_case import LLMTestCase
 
+from llm.deepseek_client import DeepSeekClient
+
 # 导入自定义模块
 from metrics.deepeval_metrics import (
     CharacterExtractionMetric,
     SceneBoundaryMetric,
     SelfConsistencyMetric,
 )
-from llm.deepseek_client import DeepSeekClient
 from models.scene_models import validate_script_json
 
 # 配置日志
@@ -393,7 +394,7 @@ class ScriptEvaluator:
 
         # 自定义序列化函数处理特殊类型
         def default_handler(obj):
-            if hasattr(obj, '__dict__'):
+            if hasattr(obj, "__dict__"):
                 return obj.__dict__
             elif isinstance(obj, (set, frozenset)):
                 return list(obj)

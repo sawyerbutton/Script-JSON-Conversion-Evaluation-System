@@ -7,12 +7,13 @@
 import sys
 from pathlib import Path
 
-# 添加src到路径
+# 添加src到路径  # noqa: E402
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from convert_outline_to_json import convert_outline_to_json
-from evaluators.main_evaluator import EvaluationConfig, ScriptEvaluator
-from utils.file_handler import FileHandler
+from convert_outline_to_json import convert_outline_to_json  # noqa: E402
+
+from evaluators.main_evaluator import EvaluationConfig, ScriptEvaluator  # noqa: E402
+from utils.file_handler import FileHandler  # noqa: E402
 
 
 def run_outline_evaluation(
@@ -39,13 +40,11 @@ def run_outline_evaluation(
     print(f"  文件大小: {len(outline_text)} 字符")
 
     # 步骤2: 转换为JSON
-    print(f"\n[步骤 2/3] 使用DeepSeek API转换大纲为JSON...")
-    print(f"  场景类型: outline（允许推断和简化）")
+    print("\n[步骤 2/3] 使用DeepSeek API转换大纲为JSON...")
+    print("  场景类型: outline（允许推断和简化）")
 
     try:
-        json_data = convert_outline_to_json(
-            outline_text, validate=True
-        )
+        json_data = convert_outline_to_json(outline_text, validate=True)
 
         if save_json:
             # 保存到outputs/converted/目录
@@ -60,7 +59,7 @@ def run_outline_evaluation(
         return None
 
     # 步骤3: 质量评估
-    print(f"\n[步骤 3/3] 运行质量评估...")
+    print("\n[步骤 3/3] 运行质量评估...")
     print(f"  使用LLM语义评估: {'是' if use_llm_judge else '否'}")
 
     config = EvaluationConfig(
@@ -86,7 +85,7 @@ def run_outline_evaluation(
         print("=" * 70)
 
         print(f"\n文件: {result.source_file}")
-        print(f"类型: 故事大纲")
+        print("类型: 故事大纲")
         print(f"质量级别: {result.quality_level}")
         print(f"总分: {result.overall_score:.3f}")
         print(f"通过: {'✅ 是' if result.passed else '❌ 否'}")
@@ -100,9 +99,7 @@ def run_outline_evaluation(
         if result.issues:
             print(f"\n发现 {len(result.issues)} 个问题:")
             for i, issue in enumerate(result.issues[:5], 1):
-                print(
-                    f"  {i}. [{issue.get('severity', 'unknown')}] {issue.get('message', 'N/A')}"
-                )
+                print(f"  {i}. [{issue.get('severity', 'unknown')}] {issue.get('message', 'N/A')}")
 
         if result.recommendations:
             print("\n改进建议:")
@@ -114,9 +111,7 @@ def run_outline_evaluation(
         print(f"  角色总数: {result.total_characters}")
 
         print("\n大纲特点:")
-        inferred_count = sum(
-            1 for scene in json_data if "推断" in scene.get("setting", "")
-        )
+        inferred_count = sum(1 for scene in json_data if "推断" in scene.get("setting", ""))
         print(f"  推断的场景设置: {inferred_count}/{len(json_data)}")
 
         print("\n" + "=" * 70)
@@ -142,9 +137,7 @@ def main():
     parser.add_argument(
         "--no-llm-judge", action="store_true", help="不使用LLM进行语义评估（节省API调用）"
     )
-    parser.add_argument(
-        "--no-save-json", action="store_true", help="不保存转换后的JSON文件"
-    )
+    parser.add_argument("--no-save-json", action="store_true", help="不保存转换后的JSON文件")
 
     args = parser.parse_args()
 

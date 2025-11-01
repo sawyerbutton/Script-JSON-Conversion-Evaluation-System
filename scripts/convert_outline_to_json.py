@@ -9,12 +9,12 @@ import json
 import sys
 from pathlib import Path
 
-# 添加src到路径
+# 添加src到路径  # noqa: E402
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from llm.deepseek_client import DeepSeekClient
-from models.scene_models import OutlineSceneInfo, validate_script_json
-from utils.file_handler import FileHandler
+from llm.deepseek_client import DeepSeekClient  # noqa: E402
+from models.scene_models import validate_script_json  # noqa: E402
+from utils.file_handler import FileHandler  # noqa: E402
 
 
 def load_prompt_template(template_name: str = "scene2_extraction.txt") -> str:
@@ -24,9 +24,7 @@ def load_prompt_template(template_name: str = "scene2_extraction.txt") -> str:
         return f.read()
 
 
-def convert_outline_to_json(
-    outline_text: str, validate: bool = True
-) -> dict:
+def convert_outline_to_json(outline_text: str, validate: bool = True) -> dict:
     """
     将故事大纲转换为JSON
 
@@ -47,8 +45,8 @@ def convert_outline_to_json(
     prompt = prompt_template.replace("{outline_text}", outline_text)
 
     print("正在调用DeepSeek API转换故事大纲...")
-    print(f"使用模板: scene2_extraction.txt")
-    print(f"大纲特点: 允许合理推断、简化场景ID格式、更灵活的验证规则")
+    print("使用模板: scene2_extraction.txt")
+    print("大纲特点: 允许合理推断、简化场景ID格式、更灵活的验证规则")
 
     # 调用LLM
     response = client.complete(
@@ -109,12 +107,8 @@ def main():
 
     parser = argparse.ArgumentParser(description="将故事大纲转换为JSON格式")
     parser.add_argument("input_file", help="输入大纲文件路径")
-    parser.add_argument(
-        "-o", "--output", help="输出JSON文件路径（可选，默认为input_file.json）"
-    )
-    parser.add_argument(
-        "--no-validate", action="store_true", help="跳过JSON验证"
-    )
+    parser.add_argument("-o", "--output", help="输出JSON文件路径（可选，默认为input_file.json）")
+    parser.add_argument("--no-validate", action="store_true", help="跳过JSON验证")
 
     args = parser.parse_args()
 
@@ -126,9 +120,7 @@ def main():
 
     # 转换
     try:
-        json_data = convert_outline_to_json(
-            outline_text, validate=not args.no_validate
-        )
+        json_data = convert_outline_to_json(outline_text, validate=not args.no_validate)
 
         # 保存输出
         if args.output:
@@ -144,7 +136,7 @@ def main():
         print(f"\n✅ 转换完成！JSON已保存到: {output_file}")
 
         # 显示统计信息
-        print(f"\n统计信息:")
+        print("\n统计信息:")
         print(f"  场景数量: {len(json_data)}")
 
         all_characters = set()
@@ -161,7 +153,7 @@ def main():
 
         # 显示示例场景
         if json_data:
-            print(f"\n示例场景（第1个）:")
+            print("\n示例场景（第1个）:")
             first_scene = json_data[0]
             print(f"  ID: {first_scene.get('scene_id')}")
             print(f"  设置: {first_scene.get('setting')}")
